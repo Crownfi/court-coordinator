@@ -5,7 +5,7 @@ use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
 use crate::{error::CourtContractError, msg::{InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, QueryResponseDenom, QueryResponseTransactionProposal, QueryResponseUserVote, AdminExecuteMsg}, state::{app::{CourtAppConfig, get_transaction_proposal_stored_vec}, user::{get_user_stats_store, get_user_vote_info_store, CourtUserVoteInfo, get_all_user_vote_info_iter}}, workarounds::{total_supply_workaround, mint_to_workaround}};
 
-use self::{shares::{VOTES_SUBDENOM, votes_denom}, admin::AdminMsgExecutor};
+use self::{shares::{VOTES_SUBDENOM, votes_denom}, admin::AdminMsgExecutor, user::{process_stake, process_unstake, process_vote, process_propose_transaction}, permissionless::{process_deactivate_votes, process_execute_proposal}};
 
 pub mod shares;
 pub mod admin;
@@ -91,12 +91,24 @@ pub fn execute(
 					},
 				}
 			},
-			ExecuteMsg::Stake => todo!(),
-			ExecuteMsg::Unstake => todo!(),
-			ExecuteMsg::Vote { id, approval } => todo!(),
-			ExecuteMsg::DeactivateVotes { user, limit } => todo!(),
-			ExecuteMsg::ProposeTransaction { msgs, expiry_time_seconds } => todo!(),
-			ExecuteMsg::ExecuteProposal { id } => todo!()
+			ExecuteMsg::Stake => {
+				process_stake(ClonableEnvInfoMut::new(deps, env), msg_info)?
+			},
+			ExecuteMsg::Unstake => {
+				process_unstake(ClonableEnvInfoMut::new(deps, env), msg_info)?
+			},
+			ExecuteMsg::Vote { id, approval } => {
+				process_vote(ClonableEnvInfoMut::new(deps, env), msg_info, id, approval)?
+			},
+			ExecuteMsg::DeactivateVotes { user, limit } => {
+				process_deactivate_votes(ClonableEnvInfoMut::new(deps, env), msg_info, user, limit)?
+			},
+			ExecuteMsg::ProposeTransaction { msgs, expiry_time_seconds } => {
+				process_propose_transaction(ClonableEnvInfoMut::new(deps, env), msg_info, msgs, expiry_time_seconds)?
+			},
+			ExecuteMsg::ExecuteProposal { id } => {
+				process_execute_proposal(ClonableEnvInfoMut::new(deps, env), msg_info, id)?
+			}
 		}
 	)
 }
