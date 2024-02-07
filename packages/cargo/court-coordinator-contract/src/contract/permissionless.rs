@@ -1,9 +1,9 @@
 use cosmwasm_std::{Response, Addr, MessageInfo, StdError, Event};
 use crownfi_cw_common::{env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions};
-use cw_storage_plus::Item;
+
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, state::{app::{get_transaction_proposal_stored_vec, get_transaction_proposal_stored_vec_mut, CourtAppConfig, TransactionProposalStatus}, user::{get_user_vote_info_store, get_user_vote_info_store_mut, get_all_user_vote_info_iter_mut, CourtUserVoteInfo, get_all_user_vote_info_keys_iter_mut}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, state::{app::{get_transaction_proposal_stored_vec_mut, CourtAppConfig, TransactionProposalStatus}, user::{get_user_vote_info_store_mut, get_all_user_vote_info_keys_iter_mut}}, workarounds::total_supply_workaround};
 
 use super::{enforce_unfunded, shares::votes_denom};
 

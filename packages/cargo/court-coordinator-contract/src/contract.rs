@@ -1,9 +1,9 @@
-use cosmwasm_std::{MessageInfo, Coin, entry_point, DepsMut, Env, Response, coin, BankMsg, Deps, Binary, to_json_binary, StdResult};
-use crownfi_cw_common::{extentions::timestamp::TimestampExtentions, storage::{map::StoredMapIter, MaybeMutableStorage, item::StoredItem}, env::ClonableEnvInfoMut};
+use cosmwasm_std::{MessageInfo, Coin, entry_point, DepsMut, Env, Response, Deps, Binary, to_json_binary, StdResult};
+use crownfi_cw_common::{extentions::timestamp::TimestampExtentions, storage::item::StoredItem, env::ClonableEnvInfoMut};
 use cw2::set_contract_version;
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, msg::{InstantiateMsg, ExecuteMsg, QueryMsg, MigrateMsg, QueryResponseDenom, QueryResponseTransactionProposal, QueryResponseUserVote, AdminExecuteMsg}, state::{app::{CourtAppConfig, get_transaction_proposal_stored_vec}, user::{get_user_stats_store, get_user_vote_info_store, CourtUserVoteInfo, get_all_user_vote_info_iter}}, workarounds::{total_supply_workaround, mint_to_workaround}};
+use crate::{error::CourtContractError, msg::{CourtInstantiateMsg, CourtExecuteMsg, CourtQueryMsg, CourtMigrateMsg, CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote, CourtAdminExecuteMsg}, state::{app::{CourtAppConfig, get_transaction_proposal_stored_vec}, user::{get_user_stats_store, get_user_vote_info_store, get_all_user_vote_info_iter}}, workarounds::{total_supply_workaround, mint_to_workaround}};
 
 use self::{shares::{VOTES_SUBDENOM, votes_denom}, admin::AdminMsgExecutor, user::{process_stake, process_unstake, process_vote, process_propose_transaction}, permissionless::{process_deactivate_votes, process_execute_proposal}};
 
@@ -22,7 +22,7 @@ pub fn instantiate(
 	deps: DepsMut<SeiQueryWrapper>,
 	env: Env,
 	msg_info: MessageInfo,
-	msg: InstantiateMsg,
+	msg: CourtInstantiateMsg,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	enforce_unfunded(&msg_info)?;
 	set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -59,15 +59,15 @@ pub fn execute(
 	deps: DepsMut<SeiQueryWrapper>,
 	env: Env,
 	msg_info: MessageInfo,
-	msg: ExecuteMsg,
+	msg: CourtExecuteMsg,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	Ok(
 		match msg {
-			ExecuteMsg::Admin(admin_msg) => {
+			CourtExecuteMsg::Admin(admin_msg) => {
 				//deps.querier.query(request)
 				let mut admin_executor = AdminMsgExecutor::new(ClonableEnvInfoMut::new(deps, env), &msg_info)?;
 				match admin_msg {
-					AdminExecuteMsg::ChangeConfig {
+					CourtAdminExecuteMsg::ChangeConfig {
 						minimum_vote_proposal_percent,
 						minimum_vote_turnout_percent,
 						minimum_vote_pass_percent,
@@ -83,30 +83,30 @@ pub fn execute(
 							admin
 						)?
 					},
-					AdminExecuteMsg::AllowNewProposals { allowed } => {
+					CourtAdminExecuteMsg::AllowNewProposals { allowed } => {
 						admin_executor.process_allow_new_proposals(&msg_info, allowed)?
 					},
-					AdminExecuteMsg::MintShares { receiver, amount } => {
+					CourtAdminExecuteMsg::MintShares { receiver, amount } => {
 						admin_executor.process_mint_shares(&msg_info, receiver, amount)?
 					},
 				}
 			},
-			ExecuteMsg::Stake => {
+			CourtExecuteMsg::Stake => {
 				process_stake(ClonableEnvInfoMut::new(deps, env), msg_info)?
 			},
-			ExecuteMsg::Unstake => {
+			CourtExecuteMsg::Unstake => {
 				process_unstake(ClonableEnvInfoMut::new(deps, env), msg_info)?
 			},
-			ExecuteMsg::Vote { id, approval } => {
+			CourtExecuteMsg::Vote { id, approval } => {
 				process_vote(ClonableEnvInfoMut::new(deps, env), msg_info, id, approval)?
 			},
-			ExecuteMsg::DeactivateVotes { user, limit } => {
+			CourtExecuteMsg::DeactivateVotes { user, limit } => {
 				process_deactivate_votes(ClonableEnvInfoMut::new(deps, env), msg_info, user, limit)?
 			},
-			ExecuteMsg::ProposeTransaction { msgs, expiry_time_seconds } => {
+			CourtExecuteMsg::ProposeTransaction { msgs, expiry_time_seconds } => {
 				process_propose_transaction(ClonableEnvInfoMut::new(deps, env), msg_info, msgs, expiry_time_seconds)?
 			},
-			ExecuteMsg::ExecuteProposal { id } => {
+			CourtExecuteMsg::ExecuteProposal { id } => {
 				process_execute_proposal(ClonableEnvInfoMut::new(deps, env), msg_info, id)?
 			}
 		}
@@ -118,7 +118,7 @@ pub fn execute(
 pub fn migrate(
     _deps: DepsMut<SeiQueryWrapper>,
    _env: Env,
-   _msg: MigrateMsg,
+   _msg: CourtMigrateMsg,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	// let contract_version = get_contract_version(deps.storage)?;
 	//contract_version.
@@ -129,29 +129,29 @@ pub fn migrate(
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 #[inline]
-pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CourtContractError> {
+pub fn query(deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtContractError> {
 	Ok(
 		match msg {
-			QueryMsg::Config => {
+			CourtQueryMsg::Config => {
 				to_json_binary(
 					&CourtAppConfig::load_non_empty(deps.storage)?
 				)?
 			},
-			QueryMsg::Denom => {
+			CourtQueryMsg::Denom => {
 				to_json_binary(
-					&QueryResponseDenom {
+					&CourtQueryResponseDenom {
 						votes: votes_denom(&env)
 					}
 				)?
 			},
-			QueryMsg::ProposalInfo { id } => {
+			CourtQueryMsg::ProposalInfo { id } => {
 				to_json_binary(
 					&get_transaction_proposal_stored_vec(
 						deps.storage
 					)?.get(id)?
 				)?
 			},
-			QueryMsg::GetProposals { skip, limit, descending } => {
+			CourtQueryMsg::GetProposals { skip, limit, descending } => {
 				let app_config = CourtAppConfig::load_non_empty(deps.storage)?;
 				let total_supply = total_supply_workaround(deps.storage, &votes_denom(&env));
 				to_json_binary(
@@ -166,7 +166,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CourtContrac
 							.map(|(index, info_result)| {
 								let info = info_result?;
 								Ok(
-									QueryResponseTransactionProposal {
+									CourtQueryResponseTransactionProposal {
 									proposal_id: index as u32,
 									status: info.status(
 										env.block.time.millis(),
@@ -176,7 +176,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CourtContrac
 									info
 								}
 								)
-							}).collect::<StdResult<Vec<QueryResponseTransactionProposal>>>()?
+							}).collect::<StdResult<Vec<CourtQueryResponseTransactionProposal>>>()?
 					}else{
 						get_transaction_proposal_stored_vec(
 							deps.storage
@@ -187,7 +187,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CourtContrac
 							.map(|(index, info_result)| {
 								let info = info_result?;
 								Ok(
-									QueryResponseTransactionProposal {
+									CourtQueryResponseTransactionProposal {
 									proposal_id: index as u32,
 									status: info.status(
 										env.block.time.millis(),
@@ -197,25 +197,25 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CourtContrac
 									info
 								}
 								)
-							}).collect::<StdResult<Vec<QueryResponseTransactionProposal>>>()?
+							}).collect::<StdResult<Vec<CourtQueryResponseTransactionProposal>>>()?
 					}
 				)?
 			},
-			QueryMsg::UserStats { user } => {
+			CourtQueryMsg::UserStats { user } => {
 				to_json_binary(
 					&get_user_stats_store(
 						deps.storage
 					)?.get(&user)?.unwrap_or_default()
 				)?
 			},
-			QueryMsg::UserVoteInfo { user, proposal_id } => {
+			CourtQueryMsg::UserVoteInfo { user, proposal_id } => {
 				to_json_binary(
 					&get_user_vote_info_store(
 						deps.storage
 					)?.get(&(user, proposal_id))?
 				)?
 			},
-			QueryMsg::GetUserVotes { user, skip, limit, descending } => {
+			CourtQueryMsg::GetUserVotes { user, skip, limit, descending, .. } => {
 				to_json_binary(
 					&if descending {
 						get_all_user_vote_info_iter(deps.storage, user)?
@@ -223,17 +223,17 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> Result<Binary, CourtContrac
 							.skip(skip as usize)
 							.take(limit as usize)
 							.map(|(proposal_id, info)| {
-								QueryResponseUserVote { proposal_id, info }
+								CourtQueryResponseUserVote { proposal_id, info }
 							})
-							.collect::<Vec<QueryResponseUserVote>>()
+							.collect::<Vec<CourtQueryResponseUserVote>>()
 					}else{
 						get_all_user_vote_info_iter(deps.storage, user)?
 							.skip(skip as usize)
 							.take(limit as usize)
 							.map(|(proposal_id, info)| {
-								QueryResponseUserVote { proposal_id, info }
+								CourtQueryResponseUserVote { proposal_id, info }
 							})
-							.collect::<Vec<QueryResponseUserVote>>()
+							.collect::<Vec<CourtQueryResponseUserVote>>()
 					}
 				)?
 			},

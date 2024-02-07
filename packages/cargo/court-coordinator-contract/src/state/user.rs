@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc, str::FromStr};
+use std::{cell::RefCell, rc::Rc};
 
 use cosmwasm_schema::schemars::{self, JsonSchema};
 use cosmwasm_std::{Uint128, Storage, StdError, Addr, StdResult};

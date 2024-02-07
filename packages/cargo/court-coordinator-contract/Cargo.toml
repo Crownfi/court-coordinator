@@ -24,3 +24,8 @@ borsh = {workspace = true}
 sei-cosmwasm = {workspace = true}
 crownfi-cw-common = {workspace = true}
 serde = {workspace = true}
+
+# for bin
+color-eyre = {workspace = true}
+bpaf = {workspace = true}
+crownfi-sei-sdk-autogen = {path = "/home/aritz/git/@crownfi/crownfi-sei-common/packages/cargo/crownfi-sei-sdk-autogen"}

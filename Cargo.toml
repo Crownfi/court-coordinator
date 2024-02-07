@@ -16,3 +16,7 @@ borsh = "0.10"
 sei-cosmwasm = "0.4"
 crownfi-cw-common = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "main" }
 serde = "1"
+
+# for SDK generation
+color-eyre = "0.6"
+bpaf = { version = "0.9", features = ["derive"] }

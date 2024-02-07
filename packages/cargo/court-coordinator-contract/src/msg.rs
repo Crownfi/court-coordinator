@@ -6,10 +6,10 @@ use crate::state::{app::{CourtAppConfig, TransactionProposalStatus, TransactionP
 
 
 #[cw_serde]
-pub struct MigrateMsg {}
+pub struct CourtMigrateMsg {}
 
 #[cw_serde]
-pub struct InstantiateMsg {
+pub struct CourtInstantiateMsg {
 	pub admin: Addr,
 	pub shares_mint_amount: Uint128,
 	pub shares_mint_receiver: Addr,
@@ -20,7 +20,7 @@ pub struct InstantiateMsg {
 }
 
 #[cw_serde]
-pub enum AdminExecuteMsg {
+pub enum CourtAdminExecuteMsg {
 	/// Change config options
 	ChangeConfig {
 		minimum_vote_proposal_percent: Option<u8>,
@@ -40,9 +40,9 @@ pub enum AdminExecuteMsg {
 }
 
 #[cw_serde]
-pub enum ExecuteMsg {
+pub enum CourtExecuteMsg {
 	/// Instruction can only be activated by the configured admin
-	Admin(AdminExecuteMsg),
+	Admin(CourtAdminExecuteMsg),
 	Stake,
 	Unstake,
 	Vote {
@@ -67,16 +67,16 @@ pub enum ExecuteMsg {
 
 #[cw_serde]
 #[derive(QueryResponses)]
-pub enum QueryMsg {
+pub enum CourtQueryMsg {
 	#[returns(CourtAppConfig)]
 	Config,
-	#[returns(QueryResponseDenom)]
+	#[returns(CourtQueryResponseDenom)]
 	Denom,
 	#[returns(Option<TransactionProposalInfo>)]
 	ProposalInfo {
 		id: u32
 	},
-	#[returns(Vec<QueryResponseTransactionProposal>)]
+	#[returns(Vec<CourtQueryResponseTransactionProposal>)]
 	GetProposals {
 		skip: u32,
 		limit: u32,
@@ -91,8 +91,10 @@ pub enum QueryMsg {
 		user: Addr,
 		proposal_id: u32
 	},
-	#[returns(Vec<QueryResponseUserVote>)]
+	#[returns(Vec<CourtQueryResponseUserVote>)]
 	GetUserVotes {
+		test_prop1: Vec<Addr>,
+		test_prop2: [u32; 5],
 		user: Addr,
 		skip: u32,
 		limit: u32,
@@ -101,19 +103,19 @@ pub enum QueryMsg {
 }
 
 #[cw_serde]
-pub struct QueryResponseDenom {
+pub struct CourtQueryResponseDenom {
 	pub votes: String
 }
 
 #[cw_serde]
-pub struct QueryResponseTransactionProposal {
+pub struct CourtQueryResponseTransactionProposal {
 	pub proposal_id: u32,
 	pub status: TransactionProposalStatus,
 	pub info: TransactionProposalInfo
 }
 
 #[cw_serde]
-pub struct QueryResponseUserVote {
+pub struct CourtQueryResponseUserVote {
 	pub proposal_id: u32,
 	pub info: CourtUserVoteInfo
 }

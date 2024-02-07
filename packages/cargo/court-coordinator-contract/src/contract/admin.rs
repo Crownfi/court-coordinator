@@ -1,10 +1,10 @@
-use cosmwasm_std::{MessageInfo, Addr, Response, Uint128, BankMsg, StdError, BankQuery};
+use cosmwasm_std::{MessageInfo, Addr, Response, Uint128, StdError, BankQuery};
 use crownfi_cw_common::{env::ClonableEnvInfoMut, storage::item::StoredItem, extentions::timestamp::TimestampExtentions};
 use sei_cosmwasm::SeiMsg;
 
 use crate::{state::app::{CourtAppConfig, CourtAppStats, get_transaction_proposal_stored_vec}, error::CourtContractError, workarounds::mint_to_workaround};
 
-use super::{shares::{votes_coin, votes_denom}, enforce_unfunded};
+use super::{shares::{votes_denom}, enforce_unfunded};
 
 
 
