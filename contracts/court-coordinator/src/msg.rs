@@ -1,8 +1,9 @@
-use cosmwasm_schema::{cw_serde, QueryResponses};
+use cosmwasm_schema::{cw_serde, schemars::{self, JsonSchema}, QueryResponses};
 use cosmwasm_std::{Uint128, Addr, CosmosMsg};
 use sei_cosmwasm::SeiMsg;
+use serde::{Deserialize, Serialize};
 
-use crate::state::{app::{CourtAppConfig, TransactionProposalStatus, TransactionProposalInfo}, user::{CourtUserStats, CourtUserVoteInfo}};
+use crate::{proposed_msg::ProposedCourtMsgJsonable, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable, TransactionProposalStatus}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}};
 
 
 #[cw_serde]
@@ -54,7 +55,7 @@ pub enum CourtExecuteMsg {
 		limit: Option<u32>
 	},
 	ProposeTransaction {
-		msgs: Vec<CosmosMsg<SeiMsg>>,
+		msgs: Vec<ProposedCourtMsgJsonable>,
 		expiry_time_seconds: u32
 	},
 	ExecuteProposal {
@@ -68,12 +69,16 @@ pub enum CourtExecuteMsg {
 #[cw_serde]
 #[derive(QueryResponses)]
 pub enum CourtQueryMsg {
-	#[returns(CourtAppConfig)]
+	#[returns(CourtAppConfigJsonable)]
 	Config,
 	#[returns(CourtQueryResponseDenom)]
 	Denom,
-	#[returns(Option<TransactionProposalInfo>)]
+	#[returns(Option<TransactionProposalInfoJsonable>)]
 	ProposalInfo {
+		id: u32
+	},
+	#[returns(Vec<ProposedCourtMsgJsonable>)]
+	ProposalMessages {
 		id: u32
 	},
 	#[returns(Vec<CourtQueryResponseTransactionProposal>)]
@@ -82,19 +87,17 @@ pub enum CourtQueryMsg {
 		limit: u32,
 		descending: bool
 	},
-	#[returns(CourtUserStats)]
+	#[returns(CourtUserStatsJsonable)]
 	UserStats {
 		user: Addr
 	},
-	#[returns(Option<CourtUserVoteInfo>)]
+	#[returns(Option<CourtUserVoteInfoJsonable>)]
 	UserVoteInfo {
 		user: Addr,
 		proposal_id: u32
 	},
 	#[returns(Vec<CourtQueryResponseUserVote>)]
 	GetUserVotes {
-		test_prop1: Vec<Addr>,
-		test_prop2: [u32; 5],
 		user: Addr,
 		skip: u32,
 		limit: u32,
@@ -102,20 +105,21 @@ pub enum CourtQueryMsg {
 	}
 }
 
-#[cw_serde]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CourtQueryResponseDenom {
 	pub votes: String
 }
 
-#[cw_serde]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CourtQueryResponseTransactionProposal {
 	pub proposal_id: u32,
 	pub status: TransactionProposalStatus,
-	pub info: TransactionProposalInfo
+	pub info: TransactionProposalInfoJsonable,
+	pub messages: Vec<ProposedCourtMsgJsonable>
 }
 
-#[cw_serde]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CourtQueryResponseUserVote {
 	pub proposal_id: u32,
-	pub info: CourtUserVoteInfo
+	pub info: CourtUserVoteInfoJsonable
 }

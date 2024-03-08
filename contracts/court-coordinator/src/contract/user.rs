@@ -1,8 +1,8 @@
 use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError, CosmosMsg};
-use crownfi_cw_common::{env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions};
+use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions};
 use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, state::{user::{get_user_stats_store_mut, CourtUserVoteInfo, get_all_user_vote_info_iter, get_user_vote_info_store_mut}, app::{get_transaction_proposal_stored_vec_mut, CourtAppConfig, TransactionProposalStatus, TransactionProposalInfo}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_votes, get_user_stats_store_mut, get_user_vote_info_store_mut, CourtUserVoteInfo, CourtUserVoteInfoJsonable}}, workarounds::total_supply_workaround};
 
 use super::{enforce_single_payment, shares::{votes_denom, votes_coin}, enforce_unfunded};
 
@@ -11,12 +11,12 @@ pub fn process_stake(
 	env_info: ClonableEnvInfoMut<SeiQueryWrapper>,
 	msg_info: MessageInfo
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	
+	let msg_sender = SeiCanonicalAddr::from_addr_using_api(&msg_info.sender, *env_info.api)?;
 	let user_payment = enforce_single_payment(&msg_info, &votes_denom(&env_info.env))?;
 	let user_stats_map = get_user_stats_store_mut(env_info.storage.clone())?;
 
-	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_info.sender)?;
-	user_stats.staked_votes = user_stats.staked_votes.checked_add(user_payment.amount)?;
+	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_sender)?;
+	user_stats.staked_votes = user_stats.staked_votes.checked_add(user_payment.amount.into()).unwrap();
 
 	Ok(
 		Response::new()
@@ -24,7 +24,7 @@ pub fn process_stake(
 				Event::new("stake")
 					.add_attribute("user", &msg_info.sender)
 					.add_attribute("new_amount", user_payment.amount)
-					.add_attribute("user_total", user_stats.staked_votes)
+					.add_attribute("user_total", Uint128::from(user_stats.staked_votes))
 			)
 	)
 }
@@ -34,10 +34,10 @@ pub fn process_unstake(
 	msg_info: MessageInfo
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	enforce_unfunded(&msg_info)?;
-
-	let has_active_votes = get_all_user_vote_info_iter(
+	let msg_sender = SeiCanonicalAddr::from_addr_using_api(&msg_info.sender, *env_info.api)?;
+	let has_active_votes = get_all_user_votes(
 		*env_info.storage.borrow(),
-		msg_info.sender.clone()
+		msg_sender
 	)?.next().is_some();
 	
 	if has_active_votes {
@@ -46,21 +46,21 @@ pub fn process_unstake(
 
 	let user_stats_map = get_user_stats_store_mut(env_info.storage.clone())?;
 
-	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_info.sender)?;
+	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_sender)?;
 	let unstake_amount = user_stats.staked_votes;
-	user_stats.staked_votes = Uint128::zero();
+	user_stats.staked_votes = 0;
 
 	Ok(
 		Response::new()
 			.add_event(
 				Event::new("unstake")
 					.add_attribute("user", &msg_info.sender)
-					.add_attribute("unstake_amount", unstake_amount)
+					.add_attribute("unstake_amount", Uint128::from(unstake_amount))
 			)
 			.add_message(
 				BankMsg::Send {
 					to_address: msg_info.sender.to_string(),
-					amount: vec![votes_coin(&env_info.env, unstake_amount.u128())]
+					amount: vec![votes_coin(&env_info.env, unstake_amount)]
 				}
 			)
 	)
@@ -73,47 +73,53 @@ pub fn process_vote(
 	approve: bool
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	enforce_unfunded(&msg_info)?;
+	let msg_sender = SeiCanonicalAddr::from_addr_using_api(&msg_info.sender, *env_info.api)?;
 	let app_config = CourtAppConfig::load_non_empty(*env_info.storage.borrow())?;
 	let token_supply = total_supply_workaround(*env_info.storage.borrow(), &votes_denom(&env_info.env));
 	let user_stats = get_user_stats_store_mut(env_info.storage.clone())?
-		.get(&msg_info.sender)?
+		.get(&msg_sender)?
 		.unwrap_or_default();
 
-	let proposals = get_transaction_proposal_stored_vec_mut(env_info.storage.clone())?;
+	let proposals = get_transaction_proposal_info_vec_mut(env_info.storage.clone())?;
 	let mut proposal = proposals.get(proposal_id)?.ok_or(
 		StdError::not_found(format!("Proposal {} does not exist", proposal_id))
 	)?;
-	proposal.status(env_info.env.block.time.millis(), &token_supply, &app_config).enforce_status(TransactionProposalStatus::Pending)?;
+	proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config)
+		.enforce_status(TransactionProposalStatus::Pending)?;
 
 	let mut user_vote_info = get_user_vote_info_store_mut(env_info.storage.clone())?
-		.get_or_default_autosaving(&(msg_info.sender.clone(), proposal_id))?;
+		.get_or_default_autosaving(&(msg_sender, proposal_id))?;
 	
-	if user_vote_info.active_votes.is_zero() {
-		if user_stats.staked_votes.is_zero() {
+	if user_vote_info.active_votes == 0 {
+		if user_stats.staked_votes == 0 {
 			return Err(CourtContractError::NoStakedVotes);
 		}
 		user_vote_info.active_votes = user_stats.staked_votes;
-		user_vote_info.voted_for = approve;
+		user_vote_info.set_voted_for(approve);
 		if approve {
-			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes)?;
+			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes).unwrap();
 		} else {
-			proposal.votes_against = proposal.votes_against.checked_add(user_stats.staked_votes)?;
-		}
-	} else if user_vote_info.active_votes == user_stats.staked_votes {
-		return Err(CourtContractError::AlreadyVoted);
-	} else if user_vote_info.voted_for != approve {
-		return Err(CourtContractError::VotingForBothSides);
-	} else if user_vote_info.active_votes < user_stats.staked_votes {
-		user_vote_info.active_votes = user_stats.staked_votes;
-		// Panics on underflow, we also just checked "<" above.
-		let diff = user_stats.staked_votes - user_vote_info.active_votes;
-		if approve {
-			proposal.votes_for = proposal.votes_for.checked_add(diff)?;
-		} else {
-			proposal.votes_against = proposal.votes_against.checked_add(diff)?;
+			proposal.votes_against = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();
 		}
 	} else {
-		unreachable!("User votes associated with proposal should never be below the total votes they have");
+		if user_vote_info.active_votes == user_stats.staked_votes {
+			return Err(CourtContractError::AlreadyVoted);
+		}
+		if user_vote_info.voted_for() != approve {
+			return Err(CourtContractError::VotingForBothSides);
+		}
+		if user_vote_info.active_votes > user_stats.staked_votes {
+			unreachable!("User votes associated with proposal should never be more than the total votes they have");
+		}
+		user_vote_info.active_votes = user_stats.staked_votes;
+
+		// We just checked ">" above.
+		let diff = user_stats.staked_votes - user_vote_info.active_votes;
+		if approve {
+			proposal.votes_for = proposal.votes_for.checked_add(diff).unwrap();
+		} else {
+			proposal.votes_against = proposal.votes_against.checked_add(diff).unwrap();
+		}
 	}
 
 	proposals.set(proposal_id, &proposal)?;
@@ -123,7 +129,7 @@ pub fn process_vote(
 				Event::new("vote")
 					.add_attribute("proposal_id", proposal_id.to_string())
 					.add_attribute("voter", msg_info.sender)
-					.add_attribute("votes", user_stats.staked_votes)
+					.add_attribute("votes", Uint128::from(user_stats.staked_votes))
 					.add_attribute("approve", approve.to_string())
 			)
 	)
@@ -133,11 +139,12 @@ pub fn process_vote(
 pub fn process_propose_transaction(
 	env_info: ClonableEnvInfoMut<SeiQueryWrapper>,
 	msg_info: MessageInfo,
-	msgs: Vec<CosmosMsg<SeiMsg>>,
+	msgs: Vec<ProposedCourtMsg>,
 	expiry_time_seconds: u32
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	enforce_unfunded(&msg_info)?;
-	let proposer = msg_info.sender;
+	let proposer = SeiCanonicalAddr::from_addr_using_api(&msg_info.sender, *env_info.api)?;
+	let proposer_addr = msg_info.sender;
 
 	let app_config = CourtAppConfig::load_non_empty(*env_info.storage.borrow())?;
 	let token_supply = total_supply_workaround(*env_info.storage.borrow(), &votes_denom(&env_info.env));
@@ -151,25 +158,23 @@ pub fn process_propose_transaction(
 	if expiry_time_seconds > app_config.max_expiry_time_seconds {
 		return Err(CourtContractError::ProposalLivesTooLong);
 	}
-	if !app_config.allow_new_proposals {
+	if !app_config.allow_new_proposals() {
 		return Err(CourtContractError::NewProposalsNotAllowed);
 	}
 	if
 		u8::try_from(
 			user_stats.staked_votes
-				.checked_mul(100u128.into())?
-				.checked_div(token_supply)?
-				.u128()
+				.checked_mul(100u128.into()).unwrap()
+				.checked_div(token_supply.into()).unwrap()
 		).unwrap() < app_config.minimum_vote_proposal_percent {
 	} else {
 		return Err(CourtContractError::InsufficientVotesForProposal);
 	}
 
-	let mut proposals = get_transaction_proposal_stored_vec_mut(env_info.storage.clone())?;
+	let mut proposals = get_transaction_proposal_info_vec_mut(env_info.storage.clone())?;
 	let new_proposal = TransactionProposalInfo::new(
 		proposer.clone(),
 		user_stats.staked_votes,
-		msgs,
 		env_info.env.block.time.plus_seconds(expiry_time_seconds as u64).millis()
 	);
 	let new_proposal_id = proposals.len();
@@ -177,10 +182,10 @@ pub fn process_propose_transaction(
 
 	get_user_vote_info_store_mut(env_info.storage.clone())?.set(
 		&(proposer.clone(), new_proposal_id),
-		&CourtUserVoteInfo {
-			active_votes: user_stats.staked_votes,
+		&CourtUserVoteInfoJsonable {
+			active_votes: user_stats.staked_votes.into(),
 			voted_for: true
-		}
+		}.into_storable(*env_info.api)?
 	)?;
 	
 	Ok(
@@ -188,13 +193,13 @@ pub fn process_propose_transaction(
 			.add_event(
 				Event::new("proposal")
 					.add_attribute("proposal_id", new_proposal_id.to_string())
-					.add_attribute("proposer", proposer.clone())
+					.add_attribute("proposer", proposer_addr.clone())
 			)
 			.add_event(
 				Event::new("vote")
 					.add_attribute("proposal_id", new_proposal_id.to_string())
-					.add_attribute("voter", proposer)
-					.add_attribute("votes", user_stats.staked_votes)
+					.add_attribute("voter", proposer_addr)
+					.add_attribute("votes", Uint128::from(user_stats.staked_votes))
 					.add_attribute("approve", true.to_string())
 			)
 			

@@ -1,22 +1,25 @@
 [workspace]
 resolver = "2"
 members = [
-  "packages/cargo/*"
+  #"packages/cargo/*",
+  "contracts/*"
 ]
 
 [workspace.dependencies]
 cw-utils = "1"
 cw2 = "1"
 cw20 = "1"
-cosmwasm-std = {version = "1", features = ["cosmwasm_1_1"]}
+cosmwasm-std = "1"
 cw-storage-plus = "1"
 cosmwasm-schema = "1"
 thiserror = "1"
-borsh = "0.10"
+borsh = {version = "1", features = ["derive"]}
 sei-cosmwasm = "0.4"
 crownfi-cw-common = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "main" }
 serde = "1"
+bytemuck = {version = "1", features = ["derive", "min_const_generics"]}
 
-# for SDK generation
-color-eyre = "0.6"
-bpaf = { version = "0.9", features = ["derive"] }
+# CLI tools
+bpaf = "0.9"
+color-eyre = "0.6" 
+crownfi-sei-sdk-autogen = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "main" }

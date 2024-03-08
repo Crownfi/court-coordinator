@@ -43,9 +43,8 @@ pub fn mint_to_workaround(
 
 pub fn total_supply_workaround(storage: & dyn Storage, denom: &str) -> Uint128 {
 	// We'll never know if users have burned any tokens because the Sei team is too focused on half-baked so-called
-	// "marketable" features to tell us.
+	// "marketable" features with bad UX to tell us.
 	Uint128::new(
-		// Storing ints as their string representations is cringe
 		u128::from_le_bytes(
 			storage.get(denom.as_bytes()).map(|vec| {
 				vec.try_into().unwrap_or_default()
