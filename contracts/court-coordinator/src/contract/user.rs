@@ -1,8 +1,8 @@
-use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError, CosmosMsg};
+use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions};
 use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_votes, get_user_stats_store_mut, get_user_vote_info_store_mut, CourtUserVoteInfo, CourtUserVoteInfoJsonable}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_votes, get_user_stats_store_mut, get_user_vote_info_store_mut, CourtUserVoteInfoJsonable}}, workarounds::total_supply_workaround};
 
 use super::{enforce_single_payment, shares::{votes_denom, votes_coin}, enforce_unfunded};
 

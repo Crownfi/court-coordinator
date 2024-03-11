@@ -1,6 +1,5 @@
 use cosmwasm_schema::{cw_serde, schemars::{self, JsonSchema}, QueryResponses};
-use cosmwasm_std::{Uint128, Addr, CosmosMsg};
-use sei_cosmwasm::SeiMsg;
+use cosmwasm_std::{Uint128, Addr};
 use serde::{Deserialize, Serialize};
 
 use crate::{proposed_msg::ProposedCourtMsgJsonable, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable, TransactionProposalStatus}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}};

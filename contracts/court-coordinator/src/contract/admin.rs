@@ -1,4 +1,4 @@
-use cosmwasm_std::{MessageInfo, Addr, Response, Uint128, StdError, BankQuery};
+use cosmwasm_std::{MessageInfo, Addr, Response, Uint128, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions, storage::item::StoredItem};
 use sei_cosmwasm::SeiMsg;
 
