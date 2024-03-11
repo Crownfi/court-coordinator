@@ -1,9 +1,9 @@
-use cosmwasm_std::{Response, MessageInfo, StdError, Event};
+use cosmwasm_std::{CosmosMsg, Event, MessageInfo, Response, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions};
 
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, state::{app::{get_transaction_proposal_info_vec_mut, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalStatus}, user::{get_all_user_votes, get_user_vote_info_store_mut}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalStatus}, user::{get_all_user_votes, get_user_vote_info_store_mut}}, workarounds::{mint_workaround, total_supply_workaround}};
 
 use super::{enforce_unfunded, shares::votes_denom};
 
@@ -73,7 +73,20 @@ pub fn process_execute_proposal(
 					.get(proposal_id)?
 					.unwrap_or_default()
 					.into_iter()
-					.map(|v| {v.into_cosm_msg(*env_info.api)})
+					.map(|p_msg| {
+						// HACK: https://github.com/sei-protocol/sei-wasmd/issues/38
+						match p_msg {
+								ProposedCourtMsg::TokenfactoryMint { tokens } if 
+								tokens.denom == votes_denom(&env_info.env) => {
+									mint_workaround(*env_info.storage.borrow_mut(), &tokens.denom, tokens.amount)
+										.map(|msg| { CosmosMsg::from(msg) })
+								},
+								_ => {
+									p_msg.into_cosm_msg(*env_info.api)
+								}
+							}
+						
+					})
 					.collect::<Result<Vec<_>, _>>()?
 			)
 	)

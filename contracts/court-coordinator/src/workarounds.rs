@@ -22,7 +22,6 @@ pub fn mint_to_workaround(
 			SeiMsg::MintTokens {
 				amount: coin(
 					amount,
-					// gotta love the implicit clone here, should be something like an AsRef<str> instead
 					denom
 				)
 			}
@@ -38,6 +37,29 @@ pub fn mint_to_workaround(
 				]
 			}
 		)
+	)
+}
+
+pub fn mint_workaround(
+	storage: &mut dyn Storage,
+	denom: &str,
+	amount: u128
+) -> StdResult<SeiMsg> {
+	let cur_supply = total_supply_workaround(
+		storage,
+		denom
+	);
+	storage.set(
+		denom.as_bytes(),
+		&cur_supply.checked_add(amount.into())?.u128().to_le_bytes()
+	);
+	Ok(
+		SeiMsg::MintTokens {
+			amount: coin(
+				amount,
+				denom
+			)
+		}
 	)
 }
 
