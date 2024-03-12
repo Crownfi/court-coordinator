@@ -74,12 +74,10 @@ pub enum CourtQueryMsg {
 	Config,
 	#[returns(CourtQueryResponseDenom)]
 	Denom,
-	#[returns(Option<TransactionProposalInfoJsonable>)]
-	ProposalInfo {
-		id: u32
-	},
-	#[returns(Vec<ProposedCourtMsgJsonable>)]
-	ProposalMessages {
+	#[returns(u32)]
+	ProposalAmount,
+	#[returns(Option<CourtQueryResponseTransactionProposal>)]
+	GetProposal {
 		id: u32
 	},
 	#[returns(Vec<CourtQueryResponseTransactionProposal>)]

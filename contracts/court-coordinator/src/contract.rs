@@ -159,20 +159,40 @@ pub fn query(deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtCo
 					}
 				)?
 			},
-			CourtQueryMsg::ProposalInfo { id } => {
+			CourtQueryMsg::ProposalAmount => {
+				to_json_binary(
+					&(get_transaction_proposal_info_vec(
+						deps.storage
+					)?.len() as u32)
+				)?
+			}
+			CourtQueryMsg::GetProposal { id } => {
+				let app_config = CourtAppConfig::load_non_empty(deps.storage)?;
+				let total_supply = total_supply_workaround(deps.storage, &votes_denom(&env));
+				let proposal_msg_vec = get_transaction_proposal_messages_vec(
+					deps.storage
+				)?;
 				to_json_binary(
 					&get_transaction_proposal_info_vec(
 						deps.storage
-					)?.get(id)?.map(|v| {v.into_jsonable(deps.api).ok()})
-				)?
-			},
-			CourtQueryMsg::ProposalMessages { id } => {
-				to_json_binary(
-					&get_transaction_proposal_messages_vec(
-						deps.storage
-					)?.get(id)?.map(|v| {
-						v.into_iter().map(|v| {v.into_jsonable(deps.api)}).collect::<Result<Vec<_>, _>>()
-					}).transpose()?.unwrap_or_default()
+					)?.get(id)?.map(|info| -> Result<_, StdError> {
+						Ok(
+							CourtQueryResponseTransactionProposal {
+								proposal_id: id as u32,
+								status: info.status(
+									env.block.time.millis(),
+									total_supply.u128(),
+									&app_config
+								),
+								info: info.into_jsonable(deps.api)?,
+								messages: proposal_msg_vec.get(id as u32)?
+									.unwrap_or_default()
+									.into_iter()
+									.map(|v| {v.into_jsonable(deps.api)})
+									.collect::<Result<Vec<_>, _>>()?
+							}
+						)
+					}).transpose()?
 				)?
 			},
 			CourtQueryMsg::GetProposals { skip, limit, descending } => {
