@@ -31,7 +31,8 @@ pub fn instantiate(
 		minimum_vote_proposal_percent: msg.minimum_vote_proposal_percent,
 		minimum_vote_turnout_percent: msg.minimum_vote_turnout_percent,
 		minimum_vote_pass_percent: msg.minimum_vote_pass_percent,
-		max_expiry_time_seconds: msg.max_expiry_time_seconds, 
+		max_proposal_expiry_time_seconds: msg.max_proposal_expiry_time_seconds,
+		execution_expiry_time_seconds: msg.execution_expiry_time_seconds,
 		last_config_change_timestamp_ms: env.block.time.millis(),
 		admin: msg.admin
 	}.into_storable(deps.api)?.save(deps.storage)?;
@@ -71,7 +72,8 @@ pub fn execute(
 						minimum_vote_proposal_percent,
 						minimum_vote_turnout_percent,
 						minimum_vote_pass_percent,
-						max_expiry_time_seconds,
+						max_proposal_expiry_time_seconds,
+						execution_expiry_time_seconds,
 						admin
 					} => {
 						admin_executor.process_change_config(
@@ -79,7 +81,8 @@ pub fn execute(
 							minimum_vote_proposal_percent,
 							minimum_vote_turnout_percent,
 							minimum_vote_pass_percent,
-							max_expiry_time_seconds,
+							max_proposal_expiry_time_seconds,
+							execution_expiry_time_seconds,
 							admin
 						)?
 					},

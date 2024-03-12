@@ -3,7 +3,7 @@ use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::Clona
 
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalStatus}, user::{get_all_user_votes, get_user_vote_info_store_mut}}, workarounds::{mint_workaround, total_supply_workaround}};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalExecutionStatus, TransactionProposalStatus}, user::{get_all_user_votes, get_user_vote_info_store_mut}}, workarounds::{mint_workaround, total_supply_workaround}};
 
 use super::{enforce_unfunded, shares::votes_denom};
 
@@ -59,9 +59,22 @@ pub fn process_execute_proposal(
 	let mut proposal = proposals.get(proposal_id)?.ok_or(
 		StdError::not_found(format!("Proposal {} does not exist", proposal_id))
 	)?;
-	proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config).enforce_status(TransactionProposalStatus::Passed)?;
-	proposal.set_executed(true);
+	let proposal_status = proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config);
+	if proposal_status == TransactionProposalStatus::ExecutionExpired {
+		proposal.set_execution_status(TransactionProposalExecutionStatus::Cancelled);
+		return Ok(
+			Response::new()
+				.add_event(
+					Event::new("proposal_cancelled")
+						.add_attribute("proposal_id", proposal_id.to_string())
+				)
+		)
+	}
+	proposal_status.enforce_status(TransactionProposalStatus::Passed)?;
+	proposal.set_execution_status(TransactionProposalExecutionStatus::Executed);
 	proposals.set(proposal_id, &proposal)?;
+
+	let votes_denom = votes_denom(&env_info.env);
 	Ok(
 		Response::new()
 			.add_event(
@@ -74,20 +87,33 @@ pub fn process_execute_proposal(
 					.unwrap_or_default()
 					.into_iter()
 					.map(|p_msg| {
-						// HACK: https://github.com/sei-protocol/sei-wasmd/issues/38
 						match p_msg {
-								ProposedCourtMsg::TokenfactoryMint { tokens } if 
-								tokens.denom == votes_denom(&env_info.env) => {
-									mint_workaround(*env_info.storage.borrow_mut(), &tokens.denom, tokens.amount)
-										.map(|msg| { CosmosMsg::from(msg) })
+								ProposedCourtMsg::TokenfactoryMint {
+									tokens
+								} if tokens.denom == votes_denom => {
+									if
+										total_supply_workaround(
+											*env_info.storage.borrow(), &votes_denom
+										).u128().saturating_mul(10000) == u128::MAX
+									{
+										// Allow us to "unsafely" do permyriad calculations without fear of overflow
+										return Err(CourtContractError::TooManyVotesToMint);
+									}
+									// HACK: https://github.com/sei-protocol/sei-wasmd/issues/38
+									Ok(
+										mint_workaround(*env_info.storage.borrow_mut(), &tokens.denom, tokens.amount)
+											.map(|msg| { CosmosMsg::from(msg) })?
+									)
 								},
 								_ => {
-									p_msg.into_cosm_msg(*env_info.api)
+									Ok(
+										p_msg.into_cosm_msg(*env_info.api)?
+									)
 								}
 							}
 						
 					})
-					.collect::<Result<Vec<_>, _>>()?
+					.collect::<Result<Vec<_>, CourtContractError>>()?
 			)
 	)
 }

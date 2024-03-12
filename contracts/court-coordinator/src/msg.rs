@@ -16,7 +16,8 @@ pub struct CourtInstantiateMsg {
 	pub minimum_vote_proposal_percent: u8,
 	pub minimum_vote_turnout_percent: u8,
 	pub minimum_vote_pass_percent: u8,
-	pub max_expiry_time_seconds: u32,
+	pub max_proposal_expiry_time_seconds: u32,
+	pub execution_expiry_time_seconds: u32,
 }
 
 #[cw_serde]
@@ -26,7 +27,8 @@ pub enum CourtAdminExecuteMsg {
 		minimum_vote_proposal_percent: Option<u8>,
 		minimum_vote_turnout_percent: Option<u8>,
 		minimum_vote_pass_percent: Option<u8>,
-		max_expiry_time_seconds: Option<u32>,
+		max_proposal_expiry_time_seconds: Option<u32>,
+		execution_expiry_time_seconds: Option<u32>,
 		admin: Option<Addr>
 	},
 	AllowNewProposals {

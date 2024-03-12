@@ -32,7 +32,8 @@ impl<'exec, Q: cosmwasm_std::CustomQuery> AdminMsgExecutor<'exec, Q> {
 		minimum_vote_proposal_percent: Option<u8>,
 		minimum_vote_turnout_percent: Option<u8>,
 		minimum_vote_pass_percent: Option<u8>,
-		max_expiry_time_seconds: Option<u32>,
+		max_proposal_expiry_time_seconds: Option<u32>,
+		execution_expiry_time_seconds: Option<u32>,
 		admin: Option<Addr>
 	) -> Result<Response<SeiMsg>, CourtContractError> {
 		enforce_unfunded(msg_info)?;
@@ -55,10 +56,18 @@ impl<'exec, Q: cosmwasm_std::CustomQuery> AdminMsgExecutor<'exec, Q> {
 		if let Some(minimum_vote_pass_percent) = minimum_vote_pass_percent {
 			self.app_config.minimum_vote_pass_percent = minimum_vote_pass_percent;
 		}
-		if let Some(max_expiry_time_seconds) = max_expiry_time_seconds {
-			self.app_config.max_expiry_time_seconds = max_expiry_time_seconds;
+		if let Some(max_proposal_expiry_time_seconds) = max_proposal_expiry_time_seconds {
+			self.app_config.max_proposal_expiry_time_seconds = max_proposal_expiry_time_seconds;
+		}
+		if let Some(execution_expiry_time_seconds) = execution_expiry_time_seconds {
+			self.app_config.execution_expiry_time_seconds = execution_expiry_time_seconds;
 		}
 		if let Some(admin) = admin  {
+			// A better check would be "are there any approved proposals which will restore proposals?"
+			// ...but this works for now
+			if !self.app_config.allow_new_proposals() && self.env_info.env.contract.address == admin {
+				return Err(CourtContractError::WouldLockupContract);
+			}
 			self.app_config.admin = SeiCanonicalAddr::from_addr_using_api(&admin, *self.env_info.api)?;
 		}
 		self.app_config.save(*self.env_info.storage.borrow_mut())?;
@@ -70,6 +79,11 @@ impl<'exec, Q: cosmwasm_std::CustomQuery> AdminMsgExecutor<'exec, Q> {
 		allow: bool
 	) -> Result<Response<SeiMsg>, CourtContractError> {
 		enforce_unfunded(msg_info)?;
+		// A better check would be "are there any approved proposals which will restore proposals?"
+		// ...but this works for now
+		if msg_info.sender == self.env_info.env.contract.address && !allow {
+			return Err(CourtContractError::WouldLockupContract);
+		}
 		self.app_config.set_allow_new_proposals(allow);
 		self.app_config.save(*self.env_info.storage.borrow_mut())?;
 		Ok(Response::new())

@@ -2,7 +2,7 @@ use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::ClonableEnvInfoMut, extentions::timestamp::TimestampExtentions};
 use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_votes, get_user_stats_store_mut, get_user_vote_info_store_mut, CourtUserVoteInfoJsonable}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec_mut, get_transaction_proposal_messages_vec_mut, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_votes, get_user_stats_store_mut, get_user_vote_info_store_mut, CourtUserVoteInfoJsonable}}, workarounds::total_supply_workaround};
 
 use super::{enforce_single_payment, shares::{votes_denom, votes_coin}, enforce_unfunded};
 
@@ -155,7 +155,7 @@ pub fn process_propose_transaction(
 	if msgs.len() == 0 {
 		return Err(CourtContractError::EmptyProposal);
 	}
-	if expiry_time_seconds > app_config.max_expiry_time_seconds {
+	if expiry_time_seconds > app_config.max_proposal_expiry_time_seconds {
 		return Err(CourtContractError::ProposalLivesTooLong);
 	}
 	if !app_config.allow_new_proposals() {
@@ -171,14 +171,17 @@ pub fn process_propose_transaction(
 		return Err(CourtContractError::InsufficientVotesForProposal);
 	}
 
-	let mut proposals = get_transaction_proposal_info_vec_mut(env_info.storage.clone())?;
+	let mut proposal_infos = get_transaction_proposal_info_vec_mut(env_info.storage.clone())?;
+	let mut proposal_msgs = get_transaction_proposal_messages_vec_mut(env_info.storage.clone())?;
 	let new_proposal = TransactionProposalInfo::new(
 		proposer.clone(),
 		user_stats.staked_votes,
 		env_info.env.block.time.plus_seconds(expiry_time_seconds as u64).millis()
 	);
-	let new_proposal_id = proposals.len();
-	proposals.push(&new_proposal)?;
+	let new_proposal_id = proposal_infos.len();
+	proposal_infos.push(&new_proposal)?;
+	proposal_msgs.push(&msgs)?;
+	assert_eq!(proposal_infos.len(), proposal_msgs.len());
 
 	get_user_vote_info_store_mut(env_info.storage.clone())?.set(
 		&(proposer.clone(), new_proposal_id),

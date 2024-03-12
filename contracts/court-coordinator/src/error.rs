@@ -37,7 +37,11 @@ pub enum CourtContractError {
 	#[error("You don't have enough staked votes to submit a proposal")]
 	InsufficientVotesForProposal,
 	#[error("New proposals currently aren't being accepted")]
-	NewProposalsNotAllowed
+	NewProposalsNotAllowed,
+	#[error("This contract cannot safely operate with the amount of new shares minted")]
+	TooManyVotesToMint,
+	#[error("Doing this may result in this contract becoming unusable")]
+	WouldLockupContract
 }
 
 impl<E> From<E> for CourtContractError where E: Into<StdError> {

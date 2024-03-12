@@ -17,7 +17,9 @@ pub struct CourtAppConfig {
 	pub minimum_vote_proposal_percent: u8,
 	pub minimum_vote_turnout_percent: u8,
 	pub minimum_vote_pass_percent: u8,
-	pub max_expiry_time_seconds: u32,
+	pub max_proposal_expiry_time_seconds: u32,
+	pub execution_expiry_time_seconds: u32,
+	_unused: [u8; 4],
 	pub last_config_change_timestamp_ms: u64,
 	pub admin: SeiCanonicalAddr
 }
@@ -28,7 +30,8 @@ pub struct CourtAppConfigJsonable {
 	pub minimum_vote_proposal_percent: u8,
 	pub minimum_vote_turnout_percent: u8,
 	pub minimum_vote_pass_percent: u8,
-	pub max_expiry_time_seconds: u32,
+	pub max_proposal_expiry_time_seconds: u32,
+	pub execution_expiry_time_seconds: u32,
 	pub last_config_change_timestamp_ms: u64,
 	pub admin: Addr
 }
@@ -62,7 +65,8 @@ impl CourtAppConfig {
 				minimum_vote_proposal_percent: self.minimum_vote_proposal_percent,
 				minimum_vote_turnout_percent: self.minimum_vote_turnout_percent,
 				minimum_vote_pass_percent: self.minimum_vote_pass_percent,
-				max_expiry_time_seconds: self.max_expiry_time_seconds,
+				max_proposal_expiry_time_seconds: self.max_proposal_expiry_time_seconds,
+				execution_expiry_time_seconds: self.execution_expiry_time_seconds,
 				last_config_change_timestamp_ms: self.last_config_change_timestamp_ms,
 				admin: self.admin.into_addr_using_api(api)?
 			}
@@ -77,9 +81,11 @@ impl CourtAppConfigJsonable {
 				minimum_vote_proposal_percent: self.minimum_vote_proposal_percent,
 				minimum_vote_turnout_percent: self.minimum_vote_turnout_percent,
 				minimum_vote_pass_percent: self.minimum_vote_pass_percent,
-				max_expiry_time_seconds: self.max_expiry_time_seconds,
+				max_proposal_expiry_time_seconds: self.max_proposal_expiry_time_seconds,
+				execution_expiry_time_seconds: self.execution_expiry_time_seconds,
 				last_config_change_timestamp_ms: self.last_config_change_timestamp_ms,
-				admin: SeiCanonicalAddr::from_addr_using_api(&self.admin, api)?
+				admin: SeiCanonicalAddr::from_addr_using_api(&self.admin, api)?,
+				.. Zeroable::zeroed()
 			}
 		)
 	}
@@ -107,14 +113,23 @@ const PROPOSAL_MSG_NAMESPACE: &str = "app_prop_m";
 
 /// Transaction proposal status, this is derived from the actual proposal struct rather than as a property.
 /// 
-/// The way this is derived is documented below. This is true because no votes can be changed after expiry.
+/// The way this is derived is documented below.
 /// ```
-/// let proposal_status = if executed {
+/// let proposal_status = if transaction_executed_status == TransactionExecutionStatus::Executed {
 /// 	TransactionProposalStatus::Executed
+/// } else if transaction_executed_status == TransactionExecutionStatus::Expired {
+/// 	TransactionProposalStatus::ExecutionExpired
 /// } else if expiry < last_config_change_time {
 /// 	TransactionProposalStatus::Rejected
 /// } else if current_time < expiry {
-/// 	TransactionProposalStatus::Pending
+/// 	if
+/// 		((votes_for + votes_against) * 100 / token_supply) >= minimum_vote_turnout_percent ||
+/// 		(votes_for * 100 / token_supply) >= minimum_vote_pass_percent
+/// 	{
+/// 		TransactionProposalStatus::Passed
+/// 	} else {
+/// 		TransactionProposalStatus::Pending
+/// 	}
 /// } else if current_time >= expiry && (
 /// 	((votes_for + votes_against) * 100 / token_supply) < minimum_vote_turnout_percent ||
 /// 	(votes_for * 100 / (votes_for + votes_against)) < minimum_vote_pass_percent
@@ -125,24 +140,32 @@ const PROPOSAL_MSG_NAMESPACE: &str = "app_prop_m";
 /// }
 /// ```
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, Default, PartialEq, Eq)]
+#[repr(u8)]
 #[serde(rename_all = "snake_case")]
 pub enum TransactionProposalStatus {
 	/// Votes are still being collected
 	#[default]
-	Pending,
+	Pending = 0,
 	/// The proposed transaction will not be executed
-	Rejected,
+	Rejected = 1,
 	/// The proposed transaction will be executed, but hasn't yet
-	Passed,
-	/// The propsoal passed and the transaction has executed
-	Executed
+	Passed = 2,
+	/// The proposal passed and the transaction has executed
+	Executed = 3,
+	/// The proposal passed but couldn't be executed before the expiry time
+	ExecutionExpired = 4,
+	/// The proposal was cancelled
+	Cancelled = 5
 }
+// SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
+unsafe impl Zeroable for TransactionProposalStatus {}
 impl TransactionProposalStatus {
 	/// Checks if the proposal is `Executed` or `Rejected`. 
 	pub fn is_finalized(&self) -> bool {
 		match self {
 			TransactionProposalStatus::Rejected |
-			TransactionProposalStatus::Executed => true,
+			TransactionProposalStatus::Executed | 
+			TransactionProposalStatus::Cancelled => true,
 			_ => false
 		}
 	}
@@ -169,7 +192,50 @@ impl std::fmt::Display for TransactionProposalStatus {
 			TransactionProposalStatus::Executed => {
 				f.write_str("executed")
 			},
+			TransactionProposalStatus::ExecutionExpired => {
+				f.write_str("execution_expired")
+			},
+			TransactionProposalStatus::Cancelled => {
+				f.write_str("cancelled")
+			}
 		}
+	}
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, JsonSchema, Default, PartialEq, Eq)]
+#[repr(u8)]
+#[serde(rename_all = "snake_case")]
+pub enum TransactionProposalExecutionStatus {
+	#[default]
+	NotExecuted = 0,
+	Executed = 1,
+	Cancelled = 2
+}
+// SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
+unsafe impl Zeroable for TransactionProposalExecutionStatus {}
+impl TransactionProposalExecutionStatus {
+	pub fn as_proposal_status(&self) -> Option<TransactionProposalStatus> {
+		match self {
+			TransactionProposalExecutionStatus::NotExecuted => None,
+			TransactionProposalExecutionStatus::Executed => Some(TransactionProposalStatus::Executed),
+			TransactionProposalExecutionStatus::Cancelled => Some(TransactionProposalStatus::Cancelled),
+		}
+	}
+}
+impl TryFrom<u8> for TransactionProposalExecutionStatus {
+	type Error = u8;
+	fn try_from(value: u8) -> Result<Self, Self::Error> {
+		match value {
+			0 => Ok(Self::NotExecuted),
+			1 => Ok(Self::Executed),
+			2 => Ok(Self::Cancelled),
+			_ => Err(value)
+		}
+	}
+}
+impl From<TransactionProposalExecutionStatus> for u8 {
+	fn from(value: TransactionProposalExecutionStatus) -> Self {
+		value as u8
 	}
 }
 
@@ -179,7 +245,7 @@ pub struct TransactionProposalInfo {
 	pub proposer: SeiCanonicalAddr,
 	pub votes_for: u128,
 	pub votes_against: u128,
-	executed: u8, // bool
+	execution_status: u8, // bool
 	_unused: [u8; 7],
 	pub expiry_timestamp_ms: u64
 }
@@ -188,7 +254,7 @@ pub struct TransactionProposalInfoJsonable {
 	pub proposer: Addr,
 	pub votes_for: Uint128,
 	pub votes_against: Uint128,
-	pub executed: bool,
+	pub execution_status: TransactionProposalExecutionStatus,
 	// Serializing numbers as strings is cringe. It's a unix timestamp, it'll fit in 2**53.
 	pub expiry_timestamp_ms: u64
 }
@@ -206,21 +272,35 @@ impl TransactionProposalInfo {
 			.. Zeroable::zeroed()
 		}
 	}
-	pub fn executed(&self) -> bool {
-		self.executed != 0
+	pub fn execution_status(&self) -> TransactionProposalExecutionStatus {
+		todo!()
 	}
-	pub fn set_executed(&mut self, value: bool) {
-		self.executed = value as u8
+	pub fn set_execution_status(&mut self, value: TransactionProposalExecutionStatus) {
+		self.execution_status = value as u8
 	}
 	pub fn status(&self, current_timestamp_ms: u64, token_supply: u128, app_config: &CourtAppConfig) -> TransactionProposalStatus {
-		if self.executed() {
-			TransactionProposalStatus::Executed
+		if let Some(status) = self.execution_status().as_proposal_status() {
+			status
 		} else if self.expiry_timestamp_ms < app_config.last_config_change_timestamp_ms {
 			// The pass threshold may have changed, but that's not relevant to when the transaction was created.
+			// Note: last_config_change_timestamp_ms cannot be incremented before proposals are fully executed.
 			TransactionProposalStatus::Rejected
 		} else if current_timestamp_ms < self.expiry_timestamp_ms {
-			TransactionProposalStatus::Pending
-		} else if current_timestamp_ms >= self.expiry_timestamp_ms && (
+			let total_vote_for_percent_of_supply = u8::try_from(self.votes_for * 100 / token_supply).unwrap();
+			let total_turnout_percent = u8::try_from(
+				(self.votes_for + self.votes_against) * 100 / token_supply
+			).unwrap();
+			if
+				total_vote_for_percent_of_supply >= app_config.minimum_vote_pass_percent &&
+				total_turnout_percent >= app_config.minimum_vote_turnout_percent
+			{
+				// At this point, this proposal can't be rejected, (unless new votes are minted) so we might as well
+				// allow the transaction to be executed early to save everyone time.
+				TransactionProposalStatus::Passed
+			} else {
+				TransactionProposalStatus::Pending
+			}
+		} else if 
 			u8::try_from(
 				// OVERFLOW SAFETY:
 				// The Mint function doesn't allow a total supply greater than 34028236692093846346337460743176821.
@@ -232,8 +312,12 @@ impl TransactionProposalInfo {
 			u8::try_from(
 				self.votes_for * 100 / (self.votes_for + self.votes_against)
 			).unwrap() < app_config.minimum_vote_pass_percent
-		) {
+		{
 			TransactionProposalStatus::Rejected
+		} else if current_timestamp_ms > self.expiry_timestamp_ms.saturating_add(
+			app_config.execution_expiry_time_seconds.saturating_mul(1000).into()
+		) {
+			TransactionProposalStatus::ExecutionExpired
 		} else {
 			TransactionProposalStatus::Passed
 		}
@@ -244,7 +328,7 @@ impl TransactionProposalInfo {
 				proposer: self.proposer.into_addr_using_api(api)?,
 				votes_for: self.votes_for.into(),
 				votes_against: self.votes_against.into(),
-				executed: self.executed(),
+				execution_status: self.execution_status(),
 				expiry_timestamp_ms: self.expiry_timestamp_ms
 			}
 		)
@@ -258,7 +342,7 @@ impl TransactionProposalInfoJsonable {
 				proposer: SeiCanonicalAddr::from_addr_using_api(&self.proposer, api)?,
 				votes_for: self.votes_for.u128(),
 				votes_against: self.votes_against.u128(),
-				executed: self.executed as u8,
+				execution_status: self.execution_status as u8,
 				_unused: Zeroable::zeroed(),
 				expiry_timestamp_ms: self.expiry_timestamp_ms
 			}

@@ -8,6 +8,7 @@
 target/
 dist/
 ts-build/
+artifacts/*.wasm
 
 # IDEs
 .vscode/
