@@ -271,7 +271,7 @@ pub fn query(deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtCo
 				to_json_binary(
 					&get_user_vote_info_store(
 						deps.storage
-					)?.get(&(user, proposal_id))?.map(|v| {v.into_jsonable(deps.api).ok()})
+					)?.get(&(user, proposal_id))?.unwrap_or_default().into_jsonable(deps.api)?
 				)?
 			},
 			CourtQueryMsg::GetUserVotes { user, skip, limit, descending, .. } => {

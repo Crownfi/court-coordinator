@@ -90,7 +90,7 @@ pub enum CourtQueryMsg {
 	UserStats {
 		user: Addr
 	},
-	#[returns(Option<CourtUserVoteInfoJsonable>)]
+	#[returns(CourtUserVoteInfoJsonable)]
 	UserVoteInfo {
 		user: Addr,
 		proposal_id: u32
