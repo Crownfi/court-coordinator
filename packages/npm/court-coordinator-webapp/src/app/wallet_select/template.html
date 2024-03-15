@@ -1,0 +1,25 @@
+<template cewt-name="wallet-button" cewt-extends="button" cewt-attributes="wallet-address">
+	Connect wallet
+</template>
+
+<template cewt-name="wallet-choice" cewt-extends="button" cewt-attributes="text, icon">
+	<img src="/assets/lazy-load.svg" cewt-ref="img">
+	<span cewt-ref="text">Generiwallet</span>
+</template>
+
+<template cewt-name="wallet-modal" cewt-extends="dialog" class="titledBox">
+	<div class="title">
+		<span cewt-ref="cancel-button" class="closeButton"></span>
+		<p>Choose wallet</p>
+	</div>
+	<div class="content">
+		<select cewt-ref="selected-network">
+			<option value="pacific-1">Mainnet (pacific-1)</option>
+			<option value="atlantic-2">Testnet (atlantic-2)</option>
+			<option value="sei-chain">Localnet (sei-chain)</option>
+		</select>
+		<div cewt-ref="choices" class="wallet-choices">
+	
+		</div>
+	</div>
+</template>

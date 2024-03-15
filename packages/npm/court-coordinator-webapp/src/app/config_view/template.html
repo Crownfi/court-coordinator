@@ -1,0 +1,38 @@
+<template cewt-name="court-config" cewt-extends="div">
+	<h1>Royal Court Coordinator</h1>
+	<table>
+		<tr>
+			<th>Proposals enabled</th>
+			<td>
+				<label class="checkbox">
+					<input type="checkbox" disabled cewt-ref="config-proposals-allowed"><span>&nbsp;</span>
+				</label>
+			</td>
+		</tr>
+		<tr>
+			<th>Minimum votes for new proposal</th><td>
+				<span cewt-ref="config-min-votes-new-percent">--</span>% of total supply<br>
+				(<span cewt-ref="config-min-votes-new-amount">--</span>)
+			</td>
+		</tr>
+		<tr>
+			<th>Minimum vote turnout for proposal approval</th><td cewt-ref="config-min-turnout">-</td>
+		</tr>
+		<tr>
+			<th>Minimum proposal approval rating</th><td cewt-ref="config-min-approval">-</td>
+		</tr>
+		<tr>
+			<th>Maximum voting time</th><td cewt-ref="config-voting-time">-</td>
+		</tr>
+		<tr>
+			<th>Proposal execution window</th><td cewt-ref="config-execution-window">-</td>
+		</tr>
+		<tr>
+			<th>Last config change time</th><td cewt-ref="config-change-time">-</td>
+		</tr>
+		<tr>
+			<th>Admin</th><td cewt-ref="config-admin">-</td>
+		</tr>
+	</table>
+	<button class="primary" cewt-ref="edit-button">Change config</button>
+</template>

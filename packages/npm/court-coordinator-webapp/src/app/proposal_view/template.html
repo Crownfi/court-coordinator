@@ -1,0 +1,79 @@
+<template cewt-name="court-proposal" cewt-extends="div" cewt-attributes="proposal-id">
+	<h2>Proposal&nbsp;<span cewt-ref="proposal-id">??</span></h2>
+	<div class="important-note" cewt-ref="status">
+		Unknown status
+	</div>
+	<p>Proposed by: <span cewt-ref="proposer">????</span></p>
+	<ol start="0" class="vote-msgs" cewt-ref="msg-list">
+
+	</ol>
+	<div class="important-note" cewt-ref="votes-user">
+		You didn't vote on this
+	</div>
+	<div class="vote-ratio-container">
+		<div class="vote-ratio-for" cewt-ref="votes-for">
+			??? (??%)
+		</div>
+		<div class="vote-ratio-against" cewt-ref="votes-against">
+			(??%) ???
+		</div>
+	</div>
+	<div class="vote-button-container">
+		<button class="success" cewt-ref="vote-for-button">Vote for</button>
+		<button class="danger" cewt-ref="vote-against-button">Vote against</button>
+	</div>
+	<button class="primary vote-finalize-button" cewt-ref="finalize-button">Finalize proposal</button>
+</template>
+
+<template cewt-name="court-proposal-msg-send-coin" cewt-extends="li" cewt-attributes="denom, amount, recipient">
+	Send <span cewt-ref="coins">??? ???</span> to <span cewt-ref="recipient">???</span>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-exec" cewt-extends="li" cewt-attributes="contract, funds, payload">
+	Contract <span cewt-ref="contract">???</span>
+	<ul cewt-ref="list"></ul>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-upgrade" cewt-extends="li" cewt-attributes="contract, code-id, payload">
+	Upgrade <span cewt-ref="contract">???</span> to code ID <span cewt-ref="code-id">???</span> <br>
+	<pre cewt-ref="payload"></pre>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-ch-admin" cewt-extends="li" cewt-attributes="contract, admin">
+	Set upgrade admin for <span cewt-ref="contract">???</span> to <span cewt-ref="admin">???</span>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-cl-admin" cewt-extends="li" cewt-attributes="contract">
+	Clear upgrade admin for <span cewt-ref="contract">???</span>
+</template>
+
+<template cewt-name="court-proposal-msg-mint" cewt-extends="li" cewt-attributes="denom, amount">
+	Mint <span cewt-ref="coins">???</span>
+</template>
+
+<template cewt-name="court-proposal-placeholder" cewt-extends="div" class="lazy-loading-covered">
+	<h2>Proposal&nbsp;?? <span class="badge">Unknown</span></h2>
+	<div class="important-note" cewt-ref="status">
+		Unknown status
+	</div>
+	<p>Proposed by: ????</p>
+	<ol class="vote-msgs">
+		<li>Send ??? ??? to ???</li>
+	</ol>
+	<div class="important-note" cewt-ref="votes-user">
+		You didn't vote on this
+	</div>
+	<div class="vote-ratio-container">
+		<div class="vote-ratio-for">
+			??? (??%)
+		</div>
+		<div class="vote-ratio-against"">
+			(??%) ???
+		</div>
+	</div>
+	<div class="vote-button-container">
+		<button class="success">Vote for</button>
+		<button class="danger">Vote against</button>
+	</div>
+	<button class="primary vote-finalize-button" cewt-ref="finalize-button">Vote against</button>
+</template>
