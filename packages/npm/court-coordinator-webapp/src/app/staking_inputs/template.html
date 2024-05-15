@@ -1,0 +1,22 @@
+<template cewt-name="staking-inputs" cewt-extends="div" class="bordered">
+	<form cewt-ref="form-unstake">
+		<div class="trade-amount-balance">
+			Staked shares: <span cewt-ref="staked-balance"></span>
+		</div>
+		<label class="trade-amount-input">
+			<input type="number" min="1" class="form-control" name="amount">
+			<span class="trade-amount-denom" cewt-ref="staked-denom">Shares</span>
+		</label>
+		<button class="primary trade-execute">Unstake</button>
+	</form>
+	<form cewt-ref="form-stake">
+		<div class="trade-amount-balance">
+			Unstaked shares: <span cewt-ref="unstaked-balance"></span>
+		</div>
+		<label class="trade-amount-input">
+			<input type="number" min="1" class="form-control" name="amount">
+			<span class="trade-amount-denom" cewt-ref="unstaked-denom">Shares</span>
+		</label>
+		<button class="primary trade-execute">Stake</button>
+	</form>
+</template>

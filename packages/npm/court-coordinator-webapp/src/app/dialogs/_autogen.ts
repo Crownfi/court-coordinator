@@ -45,20 +45,20 @@ function getPopupModalTemplate(): HTMLTemplateElement {
 export class PopupModalAutogen extends HTMLDialogElement {
 	readonly refs: PopupModalRefs;
 	static get observedAttributes() {
-		return ["heading", "icon", "message"];
+		return ["message", "icon", "heading"];
 	}
-	#attributeHeadingValue: string | null = null;
-	get heading(): string | null {
-		return this.#attributeHeadingValue;
+	#attributeMessageValue: string | null = null;
+	get message(): string | null {
+		return this.#attributeMessageValue;
 	}
-	set heading(v: string | null) {
+	set message(v: string | null) {
 		if (v == null) {
-			this.removeAttribute("heading");
+			this.removeAttribute("message");
 		}else{
-			this.setAttribute("heading", v);
+			this.setAttribute("message", v);
 		}
 	}
-	protected onHeadingChanged(oldValue: string | null, newValue: string | null) {
+	protected onMessageChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	#attributeIconValue: string | null = null;
@@ -75,33 +75,33 @@ export class PopupModalAutogen extends HTMLDialogElement {
 	protected onIconChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
-	#attributeMessageValue: string | null = null;
-	get message(): string | null {
-		return this.#attributeMessageValue;
+	#attributeHeadingValue: string | null = null;
+	get heading(): string | null {
+		return this.#attributeHeadingValue;
 	}
-	set message(v: string | null) {
+	set heading(v: string | null) {
 		if (v == null) {
-			this.removeAttribute("message");
+			this.removeAttribute("heading");
 		}else{
-			this.setAttribute("message", v);
+			this.setAttribute("heading", v);
 		}
 	}
-	protected onMessageChanged(oldValue: string | null, newValue: string | null) {
+	protected onHeadingChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "heading":
-				this.#attributeHeadingValue = newValue;
-				this.onHeadingChanged(oldValue, newValue);
+			case "message":
+				this.#attributeMessageValue = newValue;
+				this.onMessageChanged(oldValue, newValue);
 				break;
 			case "icon":
 				this.#attributeIconValue = newValue;
 				this.onIconChanged(oldValue, newValue);
 				break;
-			case "message":
-				this.#attributeMessageValue = newValue;
-				this.onMessageChanged(oldValue, newValue);
+			case "heading":
+				this.#attributeHeadingValue = newValue;
+				this.onHeadingChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -118,9 +118,6 @@ export class PopupModalAutogen extends HTMLDialogElement {
 		}
 		this.setAttribute("is", "popup-modal"); // allow for easy query selecting
 		this.refs = new PopupModalRefs(this);
-		if (!this.getAttribute("class")) {
-			this.setAttribute("class", "titledBox");
-		}
 	}
 	connectedCallback() {
 		// To be overridden by child class
@@ -180,21 +177,7 @@ function getErrorModalTemplate(): HTMLTemplateElement {
 export class ErrorModalAutogen extends HTMLDialogElement {
 	readonly refs: ErrorModalRefs;
 	static get observedAttributes() {
-		return ["details", "heading", "message"];
-	}
-	#attributeDetailsValue: string | null = null;
-	get details(): string | null {
-		return this.#attributeDetailsValue;
-	}
-	set details(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("details");
-		}else{
-			this.setAttribute("details", v);
-		}
-	}
-	protected onDetailsChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["heading", "details", "message"];
 	}
 	#attributeHeadingValue: string | null = null;
 	get heading(): string | null {
@@ -208,6 +191,20 @@ export class ErrorModalAutogen extends HTMLDialogElement {
 		}
 	}
 	protected onHeadingChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
+	#attributeDetailsValue: string | null = null;
+	get details(): string | null {
+		return this.#attributeDetailsValue;
+	}
+	set details(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("details");
+		}else{
+			this.setAttribute("details", v);
+		}
+	}
+	protected onDetailsChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	#attributeMessageValue: string | null = null;
@@ -226,13 +223,13 @@ export class ErrorModalAutogen extends HTMLDialogElement {
 	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "details":
-				this.#attributeDetailsValue = newValue;
-				this.onDetailsChanged(oldValue, newValue);
-				break;
 			case "heading":
 				this.#attributeHeadingValue = newValue;
 				this.onHeadingChanged(oldValue, newValue);
+				break;
+			case "details":
+				this.#attributeDetailsValue = newValue;
+				this.onDetailsChanged(oldValue, newValue);
 				break;
 			case "message":
 				this.#attributeMessageValue = newValue;
@@ -253,9 +250,6 @@ export class ErrorModalAutogen extends HTMLDialogElement {
 		}
 		this.setAttribute("is", "error-modal"); // allow for easy query selecting
 		this.refs = new ErrorModalRefs(this);
-		if (!this.getAttribute("class")) {
-			this.setAttribute("class", "titledBox");
-		}
 	}
 	connectedCallback() {
 		// To be overridden by child class
@@ -294,28 +288,14 @@ let _templateTxConfirmedModal: HTMLTemplateElement | null = null;
 function getTxConfirmedModalTemplate(): HTMLTemplateElement {
 	if (_templateTxConfirmedModal == null) {
 		 _templateTxConfirmedModal = document.createElement("template")
-		 _templateTxConfirmedModal.innerHTML = "\n\t<div class=\"title\">\n\t\t<p>Transaction confirmed</p>\n\t</div>\n\t<div class=\"content\">\n\t\t<div class=\"message\">\n\t\t\t<img class=\"notio-icon-ok\">\n\t\t\t<div>\n\t\t\t\t<p>Your transaction has been successfully processed.</p>\n\t\t\t\t<p><a href=\"https://www.seiscan.app/\" target=\"_blank\" cewt-ref=\"tx-link\">You may view its details here.</a></p>\n\t\t\t</div>\n\t\t</div>\n\t\t<menu class=\"buttonRowRight\"><button cewt-ref=\"dismiss-btn\">OK</button></menu>\n\t</div>\n";
+		 _templateTxConfirmedModal.innerHTML = "\n\t<div class=\"title\">\n\t\t<p>Transaction confirmed</p>\n\t</div>\n\t<div class=\"content\">\n\t\t<div class=\"message\">\n\t\t\t<img class=\"notio-icon-ok\">\n\t\t\t<div>\n\t\t\t\t<p>Your transaction has been successfully processed.</p>\n\t\t\t\t<p><a href=\"https://www.seiscan.app/\" cewt-ref=\"tx-link\" target=\"_blank\">You may view its details here.</a></p>\n\t\t\t</div>\n\t\t</div>\n\t\t<menu class=\"buttonRowRight\"><button cewt-ref=\"dismiss-btn\">OK</button></menu>\n\t</div>\n";
 	}
 	return _templateTxConfirmedModal;
 }
 export class TxConfirmedModalAutogen extends HTMLDialogElement {
 	readonly refs: TxConfirmedModalRefs;
 	static get observedAttributes() {
-		return ["chain", "txhash"];
-	}
-	#attributeChainValue: string | null = null;
-	get chain(): string | null {
-		return this.#attributeChainValue;
-	}
-	set chain(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("chain");
-		}else{
-			this.setAttribute("chain", v);
-		}
-	}
-	protected onChainChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["txhash", "chain"];
 	}
 	#attributeTxhashValue: string | null = null;
 	get txhash(): string | null {
@@ -331,15 +311,29 @@ export class TxConfirmedModalAutogen extends HTMLDialogElement {
 	protected onTxhashChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributeChainValue: string | null = null;
+	get chain(): string | null {
+		return this.#attributeChainValue;
+	}
+	set chain(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("chain");
+		}else{
+			this.setAttribute("chain", v);
+		}
+	}
+	protected onChainChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "chain":
-				this.#attributeChainValue = newValue;
-				this.onChainChanged(oldValue, newValue);
-				break;
 			case "txhash":
 				this.#attributeTxhashValue = newValue;
 				this.onTxhashChanged(oldValue, newValue);
+				break;
+			case "chain":
+				this.#attributeChainValue = newValue;
+				this.onChainChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -356,9 +350,6 @@ export class TxConfirmedModalAutogen extends HTMLDialogElement {
 		}
 		this.setAttribute("is", "tx-confirmed-modal"); // allow for easy query selecting
 		this.refs = new TxConfirmedModalRefs(this);
-		if (!this.getAttribute("class")) {
-			this.setAttribute("class", "titledBox");
-		}
 	}
 	connectedCallback() {
 		// To be overridden by child class
@@ -397,7 +388,7 @@ let _templateNewRewardsDenomModal: HTMLTemplateElement | null = null;
 function getNewRewardsDenomModalTemplate(): HTMLTemplateElement {
 	if (_templateNewRewardsDenomModal == null) {
 		 _templateNewRewardsDenomModal = document.createElement("template")
-		 _templateNewRewardsDenomModal.innerHTML = "\n\t<div class=\"title\">\n\t\t<p>New rewards token</p>\n\t</div>\n\t<form class=\"content\" method=\"dialog\">\n\t\t<div class=\"message\">\n\t\t\t<img class=\"notio-icon-add\">\n\t\t\t<div>\n\t\t\t\t<p>Native tokens should be entered as is, and CW20 contracts should prefixed with \"cw20/\".</p>\n\t\t\t\t<input type=\"text\" cewt-ref=\"text-input\">\n\t\t\t</div>\n\t\t</div>\n\t\t<menu class=\"buttonRowRight\"><button value=\"\" cewt-ref=\"submit-btn\">OK</button><button value=\"\">Cancel</button></menu>\n\t</form>\n";
+		 _templateNewRewardsDenomModal.innerHTML = "\n\t<div class=\"title\">\n\t\t<p>New rewards token</p>\n\t</div>\n\t<form method=\"dialog\" class=\"content\">\n\t\t<div class=\"message\">\n\t\t\t<img class=\"notio-icon-add\">\n\t\t\t<div>\n\t\t\t\t<p>Native tokens should be entered as is, and CW20 contracts should prefixed with \"cw20/\".</p>\n\t\t\t\t<input cewt-ref=\"text-input\" type=\"text\">\n\t\t\t</div>\n\t\t</div>\n\t\t<menu class=\"buttonRowRight\"><button value=\"\" cewt-ref=\"submit-btn\">OK</button><button value=\"\">Cancel</button></menu>\n\t</form>\n";
 	}
 	return _templateNewRewardsDenomModal;
 }
@@ -414,9 +405,6 @@ export class NewRewardsDenomModalAutogen extends HTMLDialogElement {
 		}
 		this.setAttribute("is", "new-rewards-denom-modal"); // allow for easy query selecting
 		this.refs = new NewRewardsDenomModalRefs(this);
-		if (!this.getAttribute("class")) {
-			this.setAttribute("class", "titledBox");
-		}
 	}
 	connectedCallback() {
 		// To be overridden by child class

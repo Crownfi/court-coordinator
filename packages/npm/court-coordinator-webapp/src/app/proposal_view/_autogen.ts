@@ -80,7 +80,7 @@ let _templateCourtProposal: HTMLTemplateElement | null = null;
 function getCourtProposalTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposal == null) {
 		 _templateCourtProposal = document.createElement("template")
-		 _templateCourtProposal.innerHTML = "\n\t<h2>Proposal&nbsp;<span cewt-ref=\"proposal-id\">??</span></h2>\n\t<div cewt-ref=\"status\" class=\"important-note\">\n\t\tUnknown status\n\t</div>\n\t<p>Proposed by: <span cewt-ref=\"proposer\">????</span></p>\n\t<ol class=\"vote-msgs\" start=\"0\" cewt-ref=\"msg-list\">\n\n\t</ol>\n\t<div cewt-ref=\"votes-user\" class=\"important-note\">\n\t\tYou didn\'t vote on this\n\t</div>\n\t<div class=\"vote-ratio-container\">\n\t\t<div cewt-ref=\"votes-for\" class=\"vote-ratio-for\">\n\t\t\t??? (??%)\n\t\t</div>\n\t\t<div cewt-ref=\"votes-against\" class=\"vote-ratio-against\">\n\t\t\t(??%) ???\n\t\t</div>\n\t</div>\n\t<div class=\"vote-button-container\">\n\t\t<button cewt-ref=\"vote-for-button\" class=\"success\">Vote for</button>\n\t\t<button cewt-ref=\"vote-against-button\" class=\"danger\">Vote against</button>\n\t</div>\n\t<button cewt-ref=\"finalize-button\" class=\"primary vote-finalize-button\">Vote against</button>\n";
+		 _templateCourtProposal.innerHTML = "\n\t<h2>Proposal&nbsp;<span cewt-ref=\"proposal-id\">??</span></h2>\n\t<div cewt-ref=\"status\" class=\"important-note\">\n\t\tUnknown status\n\t</div>\n\t<p>Proposed by: <span cewt-ref=\"proposer\">????</span></p>\n\t<ol cewt-ref=\"msg-list\" start=\"0\" class=\"vote-msgs\">\n\n\t</ol>\n\t<div cewt-ref=\"votes-user\" class=\"important-note\">\n\t\tYou didn\'t vote on this\n\t</div>\n\t<div class=\"vote-ratio-container\">\n\t\t<div class=\"vote-ratio-for\" cewt-ref=\"votes-for\">\n\t\t\t??? (??%)\n\t\t</div>\n\t\t<div class=\"vote-ratio-against\" cewt-ref=\"votes-against\">\n\t\t\t(??%) ???\n\t\t</div>\n\t</div>\n\t<div class=\"vote-button-container\">\n\t\t<button class=\"success\" cewt-ref=\"vote-for-button\">Vote for</button>\n\t\t<button class=\"danger\" cewt-ref=\"vote-against-button\">Vote against</button>\n\t</div>\n\t<button class=\"primary vote-finalize-button\" cewt-ref=\"finalize-button\">Finalize proposal</button>\n";
 	}
 	return _templateCourtProposal;
 }
@@ -169,7 +169,21 @@ function getCourtProposalMsgSendCoinTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgSendCoinRefs;
 	static get observedAttributes() {
-		return ["amount", "denom", "recipient"];
+		return ["recipient", "amount", "denom"];
+	}
+	#attributeRecipientValue: string | null = null;
+	get recipient(): string | null {
+		return this.#attributeRecipientValue;
+	}
+	set recipient(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("recipient");
+		}else{
+			this.setAttribute("recipient", v);
+		}
+	}
+	protected onRecipientChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
 	}
 	#attributeAmountValue: string | null = null;
 	get amount(): string | null {
@@ -199,22 +213,12 @@ export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 	protected onDenomChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
-	#attributeRecipientValue: string | null = null;
-	get recipient(): string | null {
-		return this.#attributeRecipientValue;
-	}
-	set recipient(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("recipient");
-		}else{
-			this.setAttribute("recipient", v);
-		}
-	}
-	protected onRecipientChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
-	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
+			case "recipient":
+				this.#attributeRecipientValue = newValue;
+				this.onRecipientChanged(oldValue, newValue);
+				break;
 			case "amount":
 				this.#attributeAmountValue = newValue;
 				this.onAmountChanged(oldValue, newValue);
@@ -222,10 +226,6 @@ export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 			case "denom":
 				this.#attributeDenomValue = newValue;
 				this.onDenomChanged(oldValue, newValue);
-				break;
-			case "recipient":
-				this.#attributeRecipientValue = newValue;
-				this.onRecipientChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -287,21 +287,7 @@ function getCourtProposalMsgWasmExecTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmExecRefs;
 	static get observedAttributes() {
-		return ["payload", "funds", "contract"];
-	}
-	#attributePayloadValue: string | null = null;
-	get payload(): string | null {
-		return this.#attributePayloadValue;
-	}
-	set payload(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("payload");
-		}else{
-			this.setAttribute("payload", v);
-		}
-	}
-	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["funds", "contract", "payload"];
 	}
 	#attributeFundsValue: string | null = null;
 	get funds(): string | null {
@@ -331,12 +317,22 @@ export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 	protected onContractChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributePayloadValue: string | null = null;
+	get payload(): string | null {
+		return this.#attributePayloadValue;
+	}
+	set payload(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("payload");
+		}else{
+			this.setAttribute("payload", v);
+		}
+	}
+	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "payload":
-				this.#attributePayloadValue = newValue;
-				this.onPayloadChanged(oldValue, newValue);
-				break;
 			case "funds":
 				this.#attributeFundsValue = newValue;
 				this.onFundsChanged(oldValue, newValue);
@@ -344,6 +340,10 @@ export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 			case "contract":
 				this.#attributeContractValue = newValue;
 				this.onContractChanged(oldValue, newValue);
+				break;
+			case "payload":
+				this.#attributePayloadValue = newValue;
+				this.onPayloadChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -412,21 +412,7 @@ function getCourtProposalMsgWasmUpgradeTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmUpgradeRefs;
 	static get observedAttributes() {
-		return ["payload", "code-id", "contract"];
-	}
-	#attributePayloadValue: string | null = null;
-	get payload(): string | null {
-		return this.#attributePayloadValue;
-	}
-	set payload(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("payload");
-		}else{
-			this.setAttribute("payload", v);
-		}
-	}
-	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["code-id", "contract", "payload"];
 	}
 	#attributeCodeIdValue: string | null = null;
 	get codeId(): string | null {
@@ -456,12 +442,22 @@ export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 	protected onContractChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributePayloadValue: string | null = null;
+	get payload(): string | null {
+		return this.#attributePayloadValue;
+	}
+	set payload(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("payload");
+		}else{
+			this.setAttribute("payload", v);
+		}
+	}
+	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "payload":
-				this.#attributePayloadValue = newValue;
-				this.onPayloadChanged(oldValue, newValue);
-				break;
 			case "code-id":
 				this.#attributeCodeIdValue = newValue;
 				this.onCodeIdChanged(oldValue, newValue);
@@ -469,6 +465,10 @@ export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 			case "contract":
 				this.#attributeContractValue = newValue;
 				this.onContractChanged(oldValue, newValue);
+				break;
+			case "payload":
+				this.#attributePayloadValue = newValue;
+				this.onPayloadChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -698,21 +698,7 @@ function getCourtProposalMsgMintTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgMintAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgMintRefs;
 	static get observedAttributes() {
-		return ["amount", "denom"];
-	}
-	#attributeAmountValue: string | null = null;
-	get amount(): string | null {
-		return this.#attributeAmountValue;
-	}
-	set amount(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("amount");
-		}else{
-			this.setAttribute("amount", v);
-		}
-	}
-	protected onAmountChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["denom", "amount"];
 	}
 	#attributeDenomValue: string | null = null;
 	get denom(): string | null {
@@ -728,15 +714,29 @@ export class CourtProposalMsgMintAutogen extends HTMLLIElement {
 	protected onDenomChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributeAmountValue: string | null = null;
+	get amount(): string | null {
+		return this.#attributeAmountValue;
+	}
+	set amount(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("amount");
+		}else{
+			this.setAttribute("amount", v);
+		}
+	}
+	protected onAmountChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "amount":
-				this.#attributeAmountValue = newValue;
-				this.onAmountChanged(oldValue, newValue);
-				break;
 			case "denom":
 				this.#attributeDenomValue = newValue;
 				this.onDenomChanged(oldValue, newValue);
+				break;
+			case "amount":
+				this.#attributeAmountValue = newValue;
+				this.onAmountChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -798,7 +798,7 @@ let _templateCourtProposalPlaceholder: HTMLTemplateElement | null = null;
 function getCourtProposalPlaceholderTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposalPlaceholder == null) {
 		 _templateCourtProposalPlaceholder = document.createElement("template")
-		 _templateCourtProposalPlaceholder.innerHTML = "\n\t<h2>Proposal&nbsp;?? <span class=\"badge\">Unknown</span></h2>\n\t<div cewt-ref=\"status\" class=\"important-note\">\n\t\tUnknown status\n\t</div>\n\t<p>Proposed by: ????</p>\n\t<ol class=\"vote-msgs\">\n\t\t<li>Send ??? ??? to ???</li>\n\t</ol>\n\t<div class=\"important-note\" cewt-ref=\"votes-user\">\n\t\tYou didn\'t vote on this\n\t</div>\n\t<div class=\"vote-ratio-container\">\n\t\t<div class=\"vote-ratio-for\">\n\t\t\t??? (??%)\n\t\t</div>\n\t\t<div class=\"vote-ratio-against\" \"=\"\">\n\t\t\t(??%) ???\n\t\t</div>\n\t</div>\n\t<div class=\"vote-button-container\">\n\t\t<button class=\"success\">Vote for</button>\n\t\t<button class=\"danger\">Vote against</button>\n\t</div>\n\t<button class=\"primary vote-finalize-button\" cewt-ref=\"finalize-button\">Vote against</button>\n";
+		 _templateCourtProposalPlaceholder.innerHTML = "\n\t<h2>Proposal&nbsp;?? <span class=\"badge\">Unknown</span></h2>\n\t<div cewt-ref=\"status\" class=\"important-note\">\n\t\tUnknown status\n\t</div>\n\t<p>Proposed by: ????</p>\n\t<ol class=\"vote-msgs\">\n\t\t<li>Send ??? ??? to ???</li>\n\t</ol>\n\t<div cewt-ref=\"votes-user\" class=\"important-note\">\n\t\tYou didn\'t vote on this\n\t</div>\n\t<div class=\"vote-ratio-container\">\n\t\t<div class=\"vote-ratio-for\">\n\t\t\t??? (??%)\n\t\t</div>\n\t\t<div class=\"vote-ratio-against\" \"=\"\">\n\t\t\t(??%) ???\n\t\t</div>\n\t</div>\n\t<div class=\"vote-button-container\">\n\t\t<button class=\"success\">Vote for</button>\n\t\t<button class=\"danger\">Vote against</button>\n\t</div>\n\t<button class=\"primary vote-finalize-button\" cewt-ref=\"finalize-button\">Vote against</button>\n";
 	}
 	return _templateCourtProposalPlaceholder;
 }
@@ -815,9 +815,6 @@ export class CourtProposalPlaceholderAutogen extends HTMLDivElement {
 		}
 		this.setAttribute("is", "court-proposal-placeholder"); // allow for easy query selecting
 		this.refs = new CourtProposalPlaceholderRefs(this);
-		if (!this.getAttribute("class")) {
-			this.setAttribute("class", "lazy-loading-covered");
-		}
 	}
 	connectedCallback() {
 		// To be overridden by child class

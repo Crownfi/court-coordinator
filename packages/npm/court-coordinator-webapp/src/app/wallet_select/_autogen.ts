@@ -92,28 +92,14 @@ let _templateWalletChoice: HTMLTemplateElement | null = null;
 function getWalletChoiceTemplate(): HTMLTemplateElement {
 	if (_templateWalletChoice == null) {
 		 _templateWalletChoice = document.createElement("template")
-		 _templateWalletChoice.innerHTML = "\n\t<img cewt-ref=\"img\" src=\"/assets/lazy-load.svg\">\n\t<span cewt-ref=\"text\">Generiwallet</span>\n";
+		 _templateWalletChoice.innerHTML = "\n\t<img src=\"/assets/lazy-load.svg\" cewt-ref=\"img\">\n\t<span cewt-ref=\"text\">Generiwallet</span>\n";
 	}
 	return _templateWalletChoice;
 }
 export class WalletChoiceAutogen extends HTMLButtonElement {
 	readonly refs: WalletChoiceRefs;
 	static get observedAttributes() {
-		return ["icon", "text"];
-	}
-	#attributeIconValue: string | null = null;
-	get icon(): string | null {
-		return this.#attributeIconValue;
-	}
-	set icon(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("icon");
-		}else{
-			this.setAttribute("icon", v);
-		}
-	}
-	protected onIconChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["text", "icon"];
 	}
 	#attributeTextValue: string | null = null;
 	get text(): string | null {
@@ -129,15 +115,29 @@ export class WalletChoiceAutogen extends HTMLButtonElement {
 	protected onTextChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributeIconValue: string | null = null;
+	get icon(): string | null {
+		return this.#attributeIconValue;
+	}
+	set icon(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("icon");
+		}else{
+			this.setAttribute("icon", v);
+		}
+	}
+	protected onIconChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "icon":
-				this.#attributeIconValue = newValue;
-				this.onIconChanged(oldValue, newValue);
-				break;
 			case "text":
 				this.#attributeTextValue = newValue;
 				this.onTextChanged(oldValue, newValue);
+				break;
+			case "icon":
+				this.#attributeIconValue = newValue;
+				this.onIconChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -199,7 +199,7 @@ let _templateWalletModal: HTMLTemplateElement | null = null;
 function getWalletModalTemplate(): HTMLTemplateElement {
 	if (_templateWalletModal == null) {
 		 _templateWalletModal = document.createElement("template")
-		 _templateWalletModal.innerHTML = "\n\t<div class=\"title\">\n\t\t<span cewt-ref=\"cancel-button\" class=\"closeButton\"></span>\n\t\t<p>Choose wallet</p>\n\t</div>\n\t<div class=\"content\">\n\t\t<select cewt-ref=\"selected-network\">\n\t\t\t<option value=\"pacific-1\">Mainnet (pacific-1)</option>\n\t\t\t<option value=\"atlantic-2\">Testnet (atlantic-2)</option>\n\t\t\t<option value=\"sei-chain\">Localnet (sei-chain)</option>\n\t\t</select>\n\t\t<div class=\"wallet-choices\" cewt-ref=\"choices\">\n\t\n\t\t</div>\n\t</div>\n";
+		 _templateWalletModal.innerHTML = "\n\t<div class=\"title\">\n\t\t<span class=\"closeButton\" cewt-ref=\"cancel-button\"></span>\n\t\t<p>Choose wallet</p>\n\t</div>\n\t<div class=\"content\">\n\t\t<select cewt-ref=\"selected-network\">\n\t\t\t<option value=\"pacific-1\">Mainnet (pacific-1)</option>\n\t\t\t<option value=\"atlantic-2\">Testnet (atlantic-2)</option>\n\t\t\t<option value=\"sei-chain\">Localnet (sei-chain)</option>\n\t\t</select>\n\t\t<div cewt-ref=\"choices\" class=\"wallet-choices\">\n\t\n\t\t</div>\n\t</div>\n";
 	}
 	return _templateWalletModal;
 }
@@ -216,9 +216,6 @@ export class WalletModalAutogen extends HTMLDialogElement {
 		}
 		this.setAttribute("is", "wallet-modal"); // allow for easy query selecting
 		this.refs = new WalletModalRefs(this);
-		if (!this.getAttribute("class")) {
-			this.setAttribute("class", "titledBox");
-		}
 	}
 	connectedCallback() {
 		// To be overridden by child class
