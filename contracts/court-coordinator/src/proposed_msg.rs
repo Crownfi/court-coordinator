@@ -1,6 +1,6 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use cosmwasm_schema::schemars::{self, JsonSchema};
-use cosmwasm_std::{Addr, Api, Binary, Coin, CosmosMsg, StdError, Uint128, WasmMsg};
+use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, StdError, Uint128, WasmMsg};
 use crownfi_cw_common::data_types::{asset::FungibleAssetKindString, canonical_addr::SeiCanonicalAddr};
 use sei_cosmwasm::SeiMsg;
 use serde::{Deserialize, Serialize};
@@ -87,21 +87,22 @@ pub enum ProposedCourtMsgJsonable {
 		tokens: Coin
 	}
 }
+impl TryFrom<ProposedCourtMsg> for CosmosMsg<SeiMsg> {
+	type Error = StdError;
 
-impl ProposedCourtMsg {
-	pub fn into_cosm_msg(self, api: &dyn Api) -> Result<CosmosMsg<SeiMsg>, StdError> {
-		match self {
+	fn try_from(value: ProposedCourtMsg) -> Result<Self, Self::Error> {
+		match value {
 			ProposedCourtMsg::SendCoin { to, denom, amount } => {
 				Ok(
 					denom.into_asset(amount).transfer_to_msg(
-						&to.into_addr_using_api(api)?
+						&Addr::try_from(to)?
 					)
 				)
 			},
 			ProposedCourtMsg::ExecuteWasmContract { contract, msg, funds } => {
 				Ok(
 					WasmMsg::Execute {
-						contract_addr: contract.into_addr_using_api(api)?.into_string(),
+						contract_addr: Addr::try_from(contract)?.into_string(),
 						msg: msg.into(),
 						funds: funds.into_iter().map(|v| {v.into()}).collect()
 					}.into()
@@ -110,7 +111,7 @@ impl ProposedCourtMsg {
 			ProposedCourtMsg::UpgradeWasmContract { contract, new_code_id, msg } => {
 				Ok(
 					WasmMsg::Migrate {
-						contract_addr: contract.into_addr_using_api(api)?.into_string(),
+						contract_addr: Addr::try_from(contract)?.into_string(),
 						new_code_id,
 						msg: msg.into()
 					}.into()
@@ -119,15 +120,15 @@ impl ProposedCourtMsg {
 			ProposedCourtMsg::ChangeWasmContractAdmin { contract, new_admin } => {
 				Ok(
 					WasmMsg::UpdateAdmin {
-						contract_addr: contract.into_addr_using_api(api)?.into_string(),
-						admin: new_admin.into_addr_using_api(api)?.into_string()
+						contract_addr: Addr::try_from(contract)?.into_string(),
+						admin: Addr::try_from(new_admin)?.into_string()
 					}.into()
 				)
 			},
 			ProposedCourtMsg::ClearWasmContractAdmin { contract } => {
 				Ok(
 					WasmMsg::ClearAdmin {
-						contract_addr: contract.into_addr_using_api(api)?.into_string()
+						contract_addr: Addr::try_from(contract)?.into_string()
 					}.into()
 				)
 			},
@@ -138,39 +139,43 @@ impl ProposedCourtMsg {
 			},
 		}
 	}
-	pub fn into_jsonable(self, api: &dyn Api) -> Result<ProposedCourtMsgJsonable, StdError> {
+}
+impl TryFrom<ProposedCourtMsg> for ProposedCourtMsgJsonable {
+	type Error = StdError;
+
+	fn try_from(value: ProposedCourtMsg) -> Result<Self, Self::Error> {
 		Ok(
-			match self {
+			match value {
 				ProposedCourtMsg::SendCoin { to, denom, amount } => {
 					ProposedCourtMsgJsonable::SendCoin {
-						to: to.into_addr_using_api(api)?,
+						to: Addr::try_from(to)?,
 						denom,
 						amount: amount.into()
 					}
 				},
 				ProposedCourtMsg::ExecuteWasmContract {contract, msg, funds } => {
 					ProposedCourtMsgJsonable::ExecuteWasmContract {
-						contract: contract.into_addr_using_api(api)?,
+						contract: Addr::try_from(contract)?,
 						msg: msg.into(),
 						funds: funds.into_iter().map(|v| {v.into()}).collect()
 					}
 				},
 				ProposedCourtMsg::UpgradeWasmContract { contract, new_code_id, msg } => {
 					ProposedCourtMsgJsonable::UpgradeWasmContract {
-						contract: contract.into_addr_using_api(api)?,
+						contract: Addr::try_from(contract)?,
 						new_code_id,
 						msg: msg.into()
 					}
 				},
 				ProposedCourtMsg::ChangeWasmContractAdmin { contract, new_admin } => {
 					ProposedCourtMsgJsonable::ChangeWasmContractAdmin {
-						contract: contract.into_addr_using_api(api)?,
-						new_admin: new_admin.into_addr_using_api(api)?
+						contract: Addr::try_from(contract)?,
+						new_admin: Addr::try_from(new_admin)?
 					}
 				},
 				ProposedCourtMsg::ClearWasmContractAdmin { contract } => {
 					ProposedCourtMsgJsonable::ClearWasmContractAdmin {
-						contract: contract.into_addr_using_api(api)?
+						contract: Addr::try_from(contract)?
 					}
 				},
 				ProposedCourtMsg::TokenfactoryMint { tokens } => {
@@ -180,41 +185,42 @@ impl ProposedCourtMsg {
 		)
 	}
 }
+impl TryFrom<ProposedCourtMsgJsonable> for ProposedCourtMsg {
+	type Error = StdError;
 
-impl ProposedCourtMsgJsonable {
-	pub fn into_storable(self, api: &dyn Api) -> Result<ProposedCourtMsg, StdError> {
+	fn try_from(value: ProposedCourtMsgJsonable) -> Result<Self, Self::Error> {
 		Ok(
-			match self {
+			match value {
 				ProposedCourtMsgJsonable::SendCoin { to, denom, amount } => {
 					ProposedCourtMsg::SendCoin {
-						to: SeiCanonicalAddr::from_addr_using_api(&to, api)?,
+						to: to.try_into()?,
 						denom,
 						amount: amount.into()
 					}
 				},
 				ProposedCourtMsgJsonable::ExecuteWasmContract { contract, msg, funds } => {
 					ProposedCourtMsg::ExecuteWasmContract {
-						contract: SeiCanonicalAddr::from_addr_using_api(&contract, api)?,
+						contract: contract.try_into()?,
 						msg: msg.0,
 						funds: funds.into_iter().map(|v| {v.into()}).collect()
 					}
 				},
 				ProposedCourtMsgJsonable::UpgradeWasmContract { contract, new_code_id, msg } => {
 					ProposedCourtMsg::UpgradeWasmContract {
-						contract: SeiCanonicalAddr::from_addr_using_api(&contract, api)?,
+						contract: contract.try_into()?,
 						new_code_id,
 						msg: msg.0
 					}
 				},
 				ProposedCourtMsgJsonable::ChangeWasmContractAdmin { contract, new_admin } => {
 					ProposedCourtMsg::ChangeWasmContractAdmin {
-						contract: SeiCanonicalAddr::from_addr_using_api(&contract, api)?,
-						new_admin: SeiCanonicalAddr::from_addr_using_api(&new_admin, api)?
+						contract: contract.try_into()?,
+						new_admin: new_admin.try_into()?
 					}
 				},
 				ProposedCourtMsgJsonable::ClearWasmContractAdmin { contract } => {
 					ProposedCourtMsg::ClearWasmContractAdmin {
-						contract: SeiCanonicalAddr::from_addr_using_api(&contract, api)?
+						contract: contract.try_into()?
 					}
 				},
 				ProposedCourtMsgJsonable::TokenfactoryMint { tokens } => {

@@ -1,9 +1,7 @@
-use std::{cell::RefCell, rc::Rc};
-
 use bytemuck::{Pod, Zeroable};
 use cosmwasm_schema::schemars::{self, JsonSchema};
-use cosmwasm_std::{Addr, Api, StdError, Storage, Uint128};
-use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, impl_serializable_as_ref, storage::{item::StoredItem, SerializableItem, vec::StoredVec, MaybeMutableStorage}};
+use cosmwasm_std::{Addr, StdError, Uint128};
+use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, impl_serializable_as_ref, storage::{item::StoredItem, vec::StoredVec, OZeroCopy, SerializableItem}};
 use serde::{Serialize, Deserialize};
 
 use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg};
@@ -48,8 +46,8 @@ impl CourtAppConfig {
 	pub fn set_allow_new_proposals(&mut self, value: bool) {
 		self.allow_new_proposals = value as u8;
 	}
-	pub fn load_non_empty(storage: & dyn Storage) -> Result<Self, StdError> where Self: Sized {
-		match Self::load(storage)? {
+	pub fn load_non_empty() -> Result<OZeroCopy<Self>, StdError> where Self: Sized {
+		match Self::load()? {
 			Some(result) => {
 				Ok(result)
 			},
@@ -58,34 +56,38 @@ impl CourtAppConfig {
 			}
 		}
 	}
-	pub fn into_jsonable(&self, api: &dyn Api) -> Result<CourtAppConfigJsonable, StdError> {
+}
+impl TryFrom<&CourtAppConfigJsonable> for CourtAppConfig {
+	type Error = StdError;
+	fn try_from(value: &CourtAppConfigJsonable) -> Result<Self, Self::Error> {
 		Ok(
-			CourtAppConfigJsonable {
-				allow_new_proposals: self.allow_new_proposals(),
-				minimum_vote_proposal_percent: self.minimum_vote_proposal_percent,
-				minimum_vote_turnout_percent: self.minimum_vote_turnout_percent,
-				minimum_vote_pass_percent: self.minimum_vote_pass_percent,
-				max_proposal_expiry_time_seconds: self.max_proposal_expiry_time_seconds,
-				execution_expiry_time_seconds: self.execution_expiry_time_seconds,
-				last_config_change_timestamp_ms: self.last_config_change_timestamp_ms,
-				admin: self.admin.into_addr_using_api(api)?
+			CourtAppConfig {
+				allow_new_proposals: value.allow_new_proposals as u8,
+				minimum_vote_proposal_percent: value.minimum_vote_proposal_percent,
+				minimum_vote_turnout_percent: value.minimum_vote_turnout_percent,
+				minimum_vote_pass_percent: value.minimum_vote_pass_percent,
+				max_proposal_expiry_time_seconds: value.max_proposal_expiry_time_seconds,
+				execution_expiry_time_seconds: value.execution_expiry_time_seconds,
+				last_config_change_timestamp_ms: value.last_config_change_timestamp_ms,
+				admin: (&value.admin).try_into()?,
+				.. Zeroable::zeroed()
 			}
 		)
 	}
 }
-impl CourtAppConfigJsonable {
-	pub fn into_storable(&self, api: &dyn Api) -> Result<CourtAppConfig, StdError> {
+impl TryFrom<&CourtAppConfig> for CourtAppConfigJsonable {
+	type Error = StdError;
+	fn try_from(value: &CourtAppConfig) -> Result<Self, Self::Error> {
 		Ok(
-			CourtAppConfig {
-				allow_new_proposals: self.allow_new_proposals as u8,
-				minimum_vote_proposal_percent: self.minimum_vote_proposal_percent,
-				minimum_vote_turnout_percent: self.minimum_vote_turnout_percent,
-				minimum_vote_pass_percent: self.minimum_vote_pass_percent,
-				max_proposal_expiry_time_seconds: self.max_proposal_expiry_time_seconds,
-				execution_expiry_time_seconds: self.execution_expiry_time_seconds,
-				last_config_change_timestamp_ms: self.last_config_change_timestamp_ms,
-				admin: SeiCanonicalAddr::from_addr_using_api(&self.admin, api)?,
-				.. Zeroable::zeroed()
+			CourtAppConfigJsonable {
+				allow_new_proposals: value.allow_new_proposals(),
+				minimum_vote_proposal_percent: value.minimum_vote_proposal_percent,
+				minimum_vote_turnout_percent: value.minimum_vote_turnout_percent,
+				minimum_vote_pass_percent: value.minimum_vote_pass_percent,
+				max_proposal_expiry_time_seconds: value.max_proposal_expiry_time_seconds,
+				execution_expiry_time_seconds: value.execution_expiry_time_seconds,
+				last_config_change_timestamp_ms: value.last_config_change_timestamp_ms,
+				admin: value.admin.try_into()?
 			}
 		)
 	}
@@ -322,51 +324,40 @@ impl TransactionProposalInfo {
 			TransactionProposalStatus::Passed
 		}
 	}
-	pub fn into_jsonable(&self, api: &dyn Api) -> Result<TransactionProposalInfoJsonable, StdError> {
-		Ok(
-			TransactionProposalInfoJsonable {
-				proposer: self.proposer.into_addr_using_api(api)?,
-				votes_for: self.votes_for.into(),
-				votes_against: self.votes_against.into(),
-				execution_status: self.execution_status(),
-				expiry_timestamp_ms: self.expiry_timestamp_ms
-			}
-		)
-	}
 }
 impl_serializable_as_ref!(TransactionProposalInfo);
-impl TransactionProposalInfoJsonable {
-	pub fn into_storable(&self, api: &dyn Api) -> Result<TransactionProposalInfo, StdError> {
+impl TryFrom<&TransactionProposalInfoJsonable> for TransactionProposalInfo {
+	type Error = StdError;
+	fn try_from(value: &TransactionProposalInfoJsonable) -> Result<Self, Self::Error> {
 		Ok(
-			TransactionProposalInfo {
-				proposer: SeiCanonicalAddr::from_addr_using_api(&self.proposer, api)?,
-				votes_for: self.votes_for.u128(),
-				votes_against: self.votes_against.u128(),
-				execution_status: self.execution_status as u8,
+			Self {
+				proposer: (&value.proposer).try_into()?,
+				votes_for: value.votes_for.u128(),
+				votes_against: value.votes_against.u128(),
+				execution_status: value.execution_status as u8,
 				_unused: Zeroable::zeroed(),
-				expiry_timestamp_ms: self.expiry_timestamp_ms
+				expiry_timestamp_ms: value.expiry_timestamp_ms
 			}
 		)
 	}
 }
-
-pub fn get_transaction_proposal_info_vec<'a>(
-	storage: &'a dyn Storage
-) -> Result<StoredVec<'a, TransactionProposalInfo>, StdError> {
-	Ok(StoredVec::new(PROPOSAL_INFO_NAMESPACE.as_ref(), MaybeMutableStorage::Immutable(storage)))
+impl TryFrom<&TransactionProposalInfo> for TransactionProposalInfoJsonable {
+	type Error = StdError;
+	fn try_from(value: &TransactionProposalInfo) -> Result<Self, Self::Error> {
+		Ok(
+			Self {
+				proposer: value.proposer.try_into()?,
+				votes_for: value.votes_for.into(),
+				votes_against: value.votes_against.into(),
+				execution_status: value.execution_status(),
+				expiry_timestamp_ms: value.expiry_timestamp_ms
+			}
+		)
+	}
 }
-pub fn get_transaction_proposal_info_vec_mut<'a>(
-	storage: Rc<RefCell<&'a mut dyn Storage>>
-) -> Result<StoredVec<'a, TransactionProposalInfo>, StdError> {
-	Ok(StoredVec::new(PROPOSAL_INFO_NAMESPACE.as_ref(), MaybeMutableStorage::MutableShared(storage)))
+pub fn get_transaction_proposal_info_vec() -> StoredVec<TransactionProposalInfo> {
+	StoredVec::new(PROPOSAL_INFO_NAMESPACE.as_ref())
 }
-pub fn get_transaction_proposal_messages_vec<'a>(
-	storage: &'a dyn Storage
-) -> Result<StoredVec<'a, Vec<ProposedCourtMsg>>, StdError> {
-	Ok(StoredVec::new(PROPOSAL_MSG_NAMESPACE.as_ref(), MaybeMutableStorage::Immutable(storage)))
-}
-pub fn get_transaction_proposal_messages_vec_mut<'a>(
-	storage: Rc<RefCell<&'a mut dyn Storage>>
-) -> Result<StoredVec<'a, Vec<ProposedCourtMsg>>, StdError> {
-	Ok(StoredVec::new(PROPOSAL_MSG_NAMESPACE.as_ref(), MaybeMutableStorage::MutableShared(storage)))
+pub fn get_transaction_proposal_messages_vec() -> StoredVec<Vec<ProposedCourtMsg>> {
+	StoredVec::new(PROPOSAL_MSG_NAMESPACE.as_ref())
 }
