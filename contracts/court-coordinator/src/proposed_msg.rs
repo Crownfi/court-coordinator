@@ -1,7 +1,8 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 use cosmwasm_schema::schemars::{self, JsonSchema};
 use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, StdError, Uint128, WasmMsg};
-use crownfi_cw_common::data_types::{asset::FungibleAssetKindString, canonical_addr::SeiCanonicalAddr};
+use crownfi_cw_common::{data_types::{asset::{FungibleAssetKind, FungibleAssetKindString}, canonical_addr::SeiCanonicalAddr}, utils::{bytes_to_ethereum_address, checksumify_ethereum_address, parse_ethereum_address}};
+use hex::ToHex;
 use sei_cosmwasm::SeiMsg;
 use serde::{Deserialize, Serialize};
 
@@ -31,9 +32,15 @@ impl From<BorshableCoin> for Coin {
 pub enum ProposedCourtMsg {
 	/// Sends a coin. Native or contract-driven
 	SendCoin {
+		/// Note: this may represent a 0x address if `denom` starts with "erc20/"
 		to: SeiCanonicalAddr,
-		denom: FungibleAssetKindString,
+		denom: FungibleAssetKind,
 		amount: u128
+	},
+	ExecuteEvmContract {
+		contract: [u8; 20],
+		msg: Vec<u8>,
+		value: u128
 	},
 	ExecuteWasmContract {
 		contract: SeiCanonicalAddr,
@@ -62,9 +69,14 @@ pub enum ProposedCourtMsg {
 pub enum ProposedCourtMsgJsonable {
 	/// Sends a coin
 	SendCoin {
-		to: Addr,
+		to: String,
 		denom: FungibleAssetKindString,
 		amount: Uint128
+	},
+	ExecuteEvmContract {
+		contract: String,
+		msg: Binary,
+		value: Uint128
 	},
 	ExecuteWasmContract {
 		contract: Addr,
@@ -87,6 +99,31 @@ pub enum ProposedCourtMsgJsonable {
 		tokens: Coin
 	}
 }
+impl ProposedCourtMsgJsonable {
+	/// Re-formats some stuff if applicable, this currently checksum-case-ifies 0x* addresses.
+	/// 
+	/// This may require a significant amount of gas, so it's only used for smart queries.
+	pub fn make_pretty(&mut self) -> Result<&mut Self, StdError> {
+		match self {
+			ProposedCourtMsgJsonable::SendCoin { to, denom, .. } => {
+				if to.starts_with("0x") {
+					checksumify_ethereum_address(to)?;
+				}
+				match denom {
+					FungibleAssetKindString::ERC20(contract) => {
+						checksumify_ethereum_address(contract)?;
+					},
+					_ => {}
+				}
+			},
+			ProposedCourtMsgJsonable::ExecuteEvmContract { contract, .. } => {
+				checksumify_ethereum_address(contract)?;
+			}
+			_ => {}
+		}
+		Ok(self)
+	}
+}
 impl TryFrom<ProposedCourtMsg> for CosmosMsg<SeiMsg> {
 	type Error = StdError;
 
@@ -94,11 +131,22 @@ impl TryFrom<ProposedCourtMsg> for CosmosMsg<SeiMsg> {
 		match value {
 			ProposedCourtMsg::SendCoin { to, denom, amount } => {
 				Ok(
-					denom.into_asset(amount).transfer_to_msg(
+					// We are relying on the documented "wrong" encoding behaviour of user addresses with ERC20
+					// transfers. It's an ugly hack, but it works for now.
+					FungibleAssetKindString::try_from(denom)?.into_asset(amount).transfer_to_msg(
 						&Addr::try_from(to)?
 					)
 				)
 			},
+			ProposedCourtMsg::ExecuteEvmContract { contract, msg, value } => {
+				Ok(
+					SeiMsg::CallEvm {
+						to: bytes_to_ethereum_address(&contract)?,
+						data: Binary::from(msg).to_base64(),
+						value: value.into()
+					}.into()
+				)
+			}
 			ProposedCourtMsg::ExecuteWasmContract { contract, msg, funds } => {
 				Ok(
 					WasmMsg::Execute {
@@ -142,17 +190,27 @@ impl TryFrom<ProposedCourtMsg> for CosmosMsg<SeiMsg> {
 }
 impl TryFrom<ProposedCourtMsg> for ProposedCourtMsgJsonable {
 	type Error = StdError;
-
 	fn try_from(value: ProposedCourtMsg) -> Result<Self, Self::Error> {
 		Ok(
 			match value {
 				ProposedCourtMsg::SendCoin { to, denom, amount } => {
 					ProposedCourtMsgJsonable::SendCoin {
-						to: Addr::try_from(to)?,
-						denom,
+						to: if denom.is_erc20() {
+							bytes_to_ethereum_address(to.as_slice())?
+						} else {
+							Addr::try_from(to)?.into_string()
+						},
+						denom: denom.try_into()?,
 						amount: amount.into()
 					}
 				},
+				ProposedCourtMsg::ExecuteEvmContract { contract, msg, value } => {
+					ProposedCourtMsgJsonable::ExecuteEvmContract {
+						contract: bytes_to_ethereum_address(contract.as_slice())?,
+						msg: msg.into(),
+						value: value.into()
+					}
+				}
 				ProposedCourtMsg::ExecuteWasmContract {contract, msg, funds } => {
 					ProposedCourtMsgJsonable::ExecuteWasmContract {
 						contract: Addr::try_from(contract)?,
@@ -193,11 +251,22 @@ impl TryFrom<ProposedCourtMsgJsonable> for ProposedCourtMsg {
 			match value {
 				ProposedCourtMsgJsonable::SendCoin { to, denom, amount } => {
 					ProposedCourtMsg::SendCoin {
-						to: to.try_into()?,
-						denom,
+						to: if to.starts_with("0x") {
+							parse_ethereum_address(&to)?.into()
+						} else {
+							Addr::unchecked(to).try_into()?
+						},
+						denom: denom.try_into()?,
 						amount: amount.into()
 					}
 				},
+				ProposedCourtMsgJsonable::ExecuteEvmContract { contract, msg, value } => {
+					ProposedCourtMsg::ExecuteEvmContract {
+						contract: parse_ethereum_address(&contract)?,
+						msg: msg.0,
+						value: value.into()
+					}
+				}
 				ProposedCourtMsgJsonable::ExecuteWasmContract { contract, msg, funds } => {
 					ProposedCourtMsg::ExecuteWasmContract {
 						contract: contract.try_into()?,

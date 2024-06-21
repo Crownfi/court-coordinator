@@ -3,7 +3,7 @@ use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::Minim
 use cw2::set_contract_version;
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, msg::{CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote}, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, CourtAppConfigJsonable}, user::{get_all_user_votes, get_user_stats_store, get_user_vote_info_store, CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}, workarounds::{mint_to_workaround, total_supply_workaround}};
+use crate::{error::CourtContractError, msg::{CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote}, proposed_msg::ProposedCourtMsgJsonable, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, CourtAppConfigJsonable}, user::{get_all_proposal_user_votes, get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_stats_store, CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}, workarounds::{mint_to_workaround, total_supply_workaround}};
 
 use self::{shares::{VOTES_SUBDENOM, votes_denom}, admin::AdminMsgExecutor, user::{process_stake, process_unstake, process_vote, process_propose_transaction}, permissionless::{process_deactivate_votes, process_execute_proposal}};
 
@@ -102,8 +102,8 @@ pub fn execute(
 			CourtExecuteMsg::Unstake => {
 				process_unstake(env_info, msg_info)?
 			},
-			CourtExecuteMsg::Vote { id, approval } => {
-				process_vote(env_info, msg_info, id, approval)?
+			CourtExecuteMsg::Vote { id, vote } => {
+				process_vote(env_info, msg_info, id, vote)?
 			},
 			CourtExecuteMsg::DeactivateVotes { user, limit } => {
 				process_deactivate_votes(
@@ -185,8 +185,12 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 									.unwrap_or_default()
 									.into_inner()
 									.into_iter()
-									.map(|v| {v.try_into()})
-									.collect::<Result<Vec<_>, _>>()?
+									.map(|v| {{
+										let mut v_jsonable = ProposedCourtMsgJsonable::try_from(v)?;
+										v_jsonable.make_pretty()?;
+										Ok(v_jsonable)
+									}})
+									.collect::<Result<Vec<_>, StdError>>()?
 							}
 						)
 					}).transpose()?
@@ -196,58 +200,46 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 				let app_config = CourtAppConfig::load_non_empty()?;
 				let total_supply = total_supply_workaround(&votes_denom(&env));
 				let proposal_msg_vec = get_transaction_proposal_messages_vec();
+
+				let iter = get_transaction_proposal_info_vec()
+					.into_iter()
+					.enumerate()
+					.map(|(index, info_result)| {
+						let info = info_result?;
+						Ok(
+							CourtQueryResponseTransactionProposal {
+								proposal_id: index as u32,
+								status: info.status(
+									env.block.time.millis(),
+									total_supply.u128(),
+									&app_config
+								),
+								info: info.as_ref().try_into()?,
+								messages: proposal_msg_vec.get(index as u32)?
+									.unwrap_or_default()
+									.into_inner()
+									.into_iter()
+									.map(|v| {{
+										let mut v_jsonable = ProposedCourtMsgJsonable::try_from(v)?;
+										v_jsonable.make_pretty()?;
+										Ok(v_jsonable)
+									}})
+									.collect::<Result<Vec<_>, StdError>>()?
+							}
+						)
+					});
 				to_json_binary(
 					&if descending {
-						get_transaction_proposal_info_vec().into_iter()
-							.enumerate()
+						iter
 							.rev()
-							.skip(skip as usize)
-							.take(limit as usize)
-							.map(|(index, info_result)| {
-								let info = info_result?;
-								Ok(
-									CourtQueryResponseTransactionProposal {
-										proposal_id: index as u32,
-										status: info.status(
-											env.block.time.millis(),
-											total_supply.u128(),
-											&app_config
-										),
-										info: info.as_ref().try_into()?,
-										messages: proposal_msg_vec.get(index as u32)?
-											.unwrap_or_default()
-											.into_inner()
-											.into_iter()
-											.map(|v| {v.try_into()})
-											.collect::<Result<Vec<_>, _>>()?
-									}
-								)
-							}).collect::<StdResult<Vec<CourtQueryResponseTransactionProposal>>>()?
+							.skip(skip.unwrap_or(0) as usize)
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<StdResult<Vec<CourtQueryResponseTransactionProposal>>>()?
 					}else{
-						get_transaction_proposal_info_vec().into_iter()
-							.enumerate()
-							.skip(skip as usize)
-							.take(limit as usize)
-							.map(|(index, info_result)| {
-								let info = info_result?;
-								Ok(
-									CourtQueryResponseTransactionProposal {
-										proposal_id: index as u32,
-										status: info.status(
-											env.block.time.millis(),
-											total_supply.u128(),
-											&app_config
-										),
-										info: info.as_ref().try_into()?,
-										messages: proposal_msg_vec.get(index as u32)?
-											.unwrap_or_default()
-											.into_inner()
-											.into_iter()
-											.map(|v| {v.try_into()})
-											.collect::<Result<Vec<_>, _>>()?
-									}
-								)
-							}).collect::<StdResult<Vec<CourtQueryResponseTransactionProposal>>>()?
+						iter
+							.skip(skip.unwrap_or(0) as usize)
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<StdResult<Vec<CourtQueryResponseTransactionProposal>>>()?
 					}
 				)?
 			},
@@ -263,34 +255,50 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 				let user = SeiCanonicalAddr::try_from(&user)?;
 				to_json_binary(
 					&CourtUserVoteInfoJsonable::try_from(
-						get_user_vote_info_store().get(&(user, proposal_id))?.unwrap_or_default().as_ref()
+						get_proposal_user_vote_store().get(&(proposal_id, user))?.unwrap_or_default().as_ref()
 					)?
 				)?
 			},
-			CourtQueryMsg::GetUserVotes { user, skip, limit, descending, .. } => {
-				let user = SeiCanonicalAddr::try_from(&user)?;
+			CourtQueryMsg::GetUserActiveProposals { user, skip, limit, descending } => {
+				let iter = get_all_user_active_proposal_ids(SeiCanonicalAddr::try_from(user)?)?;
 				to_json_binary(
 					&if descending {
-						get_all_user_votes(user)?
+						iter
 							.rev()
-							.skip(skip as usize)
-							.take(limit as usize)
-							.map(|(proposal_id, info)| {
-								Ok(
-									CourtQueryResponseUserVote { proposal_id, info: info.as_ref().try_into()? }
-								)
-							})
-							.collect::<Result<Vec<CourtQueryResponseUserVote>, StdError>>()?
+							.skip(skip.unwrap_or(0) as usize)
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<Vec<u32>>()
 					}else{
-						get_all_user_votes(user)?
-							.skip(skip as usize)
-							.take(limit as usize)
-							.map(|(proposal_id, info)| {
-								Ok(
-									CourtQueryResponseUserVote { proposal_id, info: info.as_ref().try_into()? }
-								)
-							})
-							.collect::<Result<Vec<CourtQueryResponseUserVote>, StdError>>()?
+						iter
+							.skip(skip.unwrap_or(0) as usize)
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<Vec<u32>>()
+					}
+				)?
+			},
+			CourtQueryMsg::GetProposalUserVotes { proposal_id, after, limit, descending } => {
+				let iter = get_all_proposal_user_votes(
+					proposal_id,
+					after.as_ref().filter(|_| {!descending}).map(|addr| {addr.try_into()}).transpose()?,
+					after.as_ref().filter(|_| {descending}).map(|addr| {addr.try_into()}).transpose()?,
+				)?.map(|(addr, info)| {
+					Ok(
+						CourtQueryResponseUserVote {
+							user: addr.try_into()?,
+							info: info.as_ref().try_into()?
+						}
+					)
+				});
+				to_json_binary(
+					&if descending {
+						iter
+							.rev()
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<StdResult<Vec<CourtQueryResponseUserVote>>>()?
+					}else{
+						iter
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<StdResult<Vec<CourtQueryResponseUserVote>>>()?
 					}
 				)?
 			},

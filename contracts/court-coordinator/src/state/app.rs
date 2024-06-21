@@ -224,14 +224,13 @@ impl TransactionProposalExecutionStatus {
 		}
 	}
 }
-impl TryFrom<u8> for TransactionProposalExecutionStatus {
-	type Error = u8;
-	fn try_from(value: u8) -> Result<Self, Self::Error> {
+impl From<u8> for TransactionProposalExecutionStatus {
+	fn from(value: u8) -> Self {
 		match value {
-			0 => Ok(Self::NotExecuted),
-			1 => Ok(Self::Executed),
-			2 => Ok(Self::Cancelled),
-			_ => Err(value)
+			0 => Self::NotExecuted,
+			1 => Self::Executed,
+			2 => Self::Cancelled,
+			_ => Self::Cancelled
 		}
 	}
 }
@@ -247,6 +246,7 @@ pub struct TransactionProposalInfo {
 	pub proposer: SeiCanonicalAddr,
 	pub votes_for: u128,
 	pub votes_against: u128,
+	pub votes_abstain: u128,
 	execution_status: u8, // bool
 	_unused: [u8; 7],
 	pub expiry_timestamp_ms: u64
@@ -256,6 +256,7 @@ pub struct TransactionProposalInfoJsonable {
 	pub proposer: Addr,
 	pub votes_for: Uint128,
 	pub votes_against: Uint128,
+	pub votes_abstain: Uint128,
 	pub execution_status: TransactionProposalExecutionStatus,
 	// Serializing numbers as strings is cringe. It's a unix timestamp, it'll fit in 2**53.
 	pub expiry_timestamp_ms: u64
@@ -275,10 +276,10 @@ impl TransactionProposalInfo {
 		}
 	}
 	pub fn execution_status(&self) -> TransactionProposalExecutionStatus {
-		todo!()
+		self.execution_status.into()
 	}
 	pub fn set_execution_status(&mut self, value: TransactionProposalExecutionStatus) {
-		self.execution_status = value as u8
+		self.execution_status = value.into()
 	}
 	pub fn status(&self, current_timestamp_ms: u64, token_supply: u128, app_config: &CourtAppConfig) -> TransactionProposalStatus {
 		if let Some(status) = self.execution_status().as_proposal_status() {
@@ -334,6 +335,7 @@ impl TryFrom<&TransactionProposalInfoJsonable> for TransactionProposalInfo {
 				proposer: (&value.proposer).try_into()?,
 				votes_for: value.votes_for.u128(),
 				votes_against: value.votes_against.u128(),
+				votes_abstain: value.votes_abstain.u128(),
 				execution_status: value.execution_status as u8,
 				_unused: Zeroable::zeroed(),
 				expiry_timestamp_ms: value.expiry_timestamp_ms
@@ -349,6 +351,7 @@ impl TryFrom<&TransactionProposalInfo> for TransactionProposalInfoJsonable {
 				proposer: value.proposer.try_into()?,
 				votes_for: value.votes_for.into(),
 				votes_against: value.votes_against.into(),
+				votes_abstain: value.votes_abstain.into(),
 				execution_status: value.execution_status(),
 				expiry_timestamp_ms: value.expiry_timestamp_ms
 			}

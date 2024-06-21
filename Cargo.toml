@@ -15,11 +15,13 @@ cosmwasm-schema = "1"
 thiserror = "1"
 borsh = {version = "1", features = ["derive"]}
 sei-cosmwasm = "0.4"
-crownfi-cw-common = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "aritzcracker-less-inefficient-cosmwasm-api" }
+crownfi-cw-common = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "main" }
 serde = "1"
 bytemuck = {version = "1", features = ["derive", "min_const_generics"]}
+bitflags = {version = "2.5"}
+hex = "0.4.3"
 
 # CLI tools
 bpaf = {version = "0.9", features = ["bpaf_derive"]}
 color-eyre = "0.6" 
-crownfi-sei-sdk-autogen = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "aritzcracker-less-inefficient-cosmwasm-api" }
+crownfi-sei-sdk-autogen = { git = "ssh://git@github.com/Crownfi/crownfi-sei-common.git", branch = "main" }

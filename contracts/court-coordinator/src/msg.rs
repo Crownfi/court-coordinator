@@ -2,7 +2,7 @@ use cosmwasm_schema::{cw_serde, schemars::{self, JsonSchema}, QueryResponses};
 use cosmwasm_std::{Uint128, Addr};
 use serde::{Deserialize, Serialize};
 
-use crate::{proposed_msg::ProposedCourtMsgJsonable, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable, TransactionProposalStatus}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}};
+use crate::{proposed_msg::ProposedCourtMsgJsonable, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable, TransactionProposalStatus}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}};
 
 
 #[cw_serde]
@@ -49,7 +49,7 @@ pub enum CourtExecuteMsg {
 	Unstake,
 	Vote {
 		id: u32,
-		approval: bool
+		vote: CourtUserVoteStatus
 	},
 	DeactivateVotes {
 		user: Option<Addr>,
@@ -82,8 +82,8 @@ pub enum CourtQueryMsg {
 	},
 	#[returns(Vec<CourtQueryResponseTransactionProposal>)]
 	GetProposals {
-		skip: u32,
-		limit: u32,
+		skip: Option<u32>,
+		limit: Option<u32>,
 		descending: bool
 	},
 	#[returns(CourtUserStatsJsonable)]
@@ -95,11 +95,18 @@ pub enum CourtQueryMsg {
 		user: Addr,
 		proposal_id: u32
 	},
-	#[returns(Vec<CourtQueryResponseUserVote>)]
-	GetUserVotes {
+	#[returns(Vec<u32>)]
+	GetUserActiveProposals {
 		user: Addr,
-		skip: u32,
-		limit: u32,
+		skip: Option<u32>,
+		limit: Option<u32>,
+		descending: bool
+	},
+	#[returns(Vec<CourtQueryResponseUserVote>)]
+	GetProposalUserVotes {
+		proposal_id: u32,
+		after: Option<Addr>,
+		limit: Option<u32>,
 		descending: bool
 	}
 }
@@ -119,6 +126,6 @@ pub struct CourtQueryResponseTransactionProposal {
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
 pub struct CourtQueryResponseUserVote {
-	pub proposal_id: u32,
+	pub user: Addr,
 	pub info: CourtUserVoteInfoJsonable
 }

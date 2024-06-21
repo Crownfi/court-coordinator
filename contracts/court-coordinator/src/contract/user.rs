@@ -2,7 +2,7 @@ use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions};
 use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_votes, get_user_stats_store, get_user_vote_info_store, CourtUserVoteInfoJsonable}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
 
 use super::{enforce_single_payment, shares::{votes_denom, votes_coin}, enforce_unfunded};
 
@@ -35,7 +35,7 @@ pub fn process_unstake(
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	enforce_unfunded(&msg_info)?;
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
-	let has_active_votes = get_all_user_votes(
+	let has_active_votes = get_all_user_active_proposal_ids(
 		msg_sender
 	)?.next().is_some();
 	
@@ -69,7 +69,7 @@ pub fn process_vote(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
 	msg_info: MessageInfo,
 	proposal_id: u32,
-	approve: bool
+	approve: CourtUserVoteStatus
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	enforce_unfunded(&msg_info)?;
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
@@ -86,41 +86,47 @@ pub fn process_vote(
 	proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config)
 		.enforce_status(TransactionProposalStatus::Pending)?;
 
-	let mut user_vote_info = get_user_vote_info_store()
-		.get_or_default_autosaving(&(msg_sender, proposal_id))?;
+	let user_active_proposals = get_user_active_proposal_id_set();
+	let mut user_vote_info = get_proposal_user_vote_store()
+		.get_or_default_autosaving(&(proposal_id, msg_sender))?;
 	
-	if user_vote_info.active_votes == 0 {
-		if user_stats.staked_votes == 0 {
-			return Err(CourtContractError::NoStakedVotes);
-		}
-		user_vote_info.active_votes = user_stats.staked_votes;
-		user_vote_info.set_voted_for(approve);
-		if approve {
-			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes).unwrap();
-		} else {
-			proposal.votes_against = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();
-		}
-	} else {
-		if user_vote_info.active_votes == user_stats.staked_votes {
+	if user_stats.staked_votes == 0 {
+		return Err(CourtContractError::NoStakedVotes);
+	}
+	if user_vote_info.active_votes != 0 {
+		if
+			user_vote_info.active_votes == user_stats.staked_votes &&
+			user_vote_info.vote() == approve
+		{
 			return Err(CourtContractError::AlreadyVoted);
 		}
-		if user_vote_info.voted_for() != approve {
-			return Err(CourtContractError::VotingForBothSides);
-		}
-		if user_vote_info.active_votes > user_stats.staked_votes {
-			unreachable!("User votes associated with proposal should never be more than the total votes they have");
-		}
-		user_vote_info.active_votes = user_stats.staked_votes;
-
-		// We just checked ">" above.
-		let diff = user_stats.staked_votes - user_vote_info.active_votes;
-		if approve {
-			proposal.votes_for = proposal.votes_for.checked_add(diff).unwrap();
-		} else {
-			proposal.votes_against = proposal.votes_against.checked_add(diff).unwrap();
+		// User is either adding votes or chainging their vote, so we gotta take away the old votes first
+		match user_vote_info.vote() {
+			CourtUserVoteStatus::Oppose => {
+				proposal.votes_against = proposal.votes_against.checked_sub(user_vote_info.active_votes).unwrap();
+			},
+			CourtUserVoteStatus::Approve => {
+				proposal.votes_for = proposal.votes_for.checked_sub(user_vote_info.active_votes).unwrap();	
+			},
+			CourtUserVoteStatus::Abstain => {
+				proposal.votes_abstain = proposal.votes_against.checked_sub(user_vote_info.active_votes).unwrap();	
+			},
 		}
 	}
-
+	user_vote_info.active_votes = user_stats.staked_votes;
+	user_vote_info.set_vote(approve);
+	match approve {
+		CourtUserVoteStatus::Oppose => {
+			proposal.votes_against = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();
+		},
+		CourtUserVoteStatus::Approve => {
+			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes).unwrap();	
+		},
+		CourtUserVoteStatus::Abstain => {
+			proposal.votes_abstain = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();	
+		},
+	}
+	user_active_proposals.add(&(msg_sender, proposal_id))?;
 	proposals.set(proposal_id, &proposal)?;
 	Ok(
 		Response::new()
@@ -129,7 +135,7 @@ pub fn process_vote(
 					.add_attribute("proposal_id", proposal_id.to_string())
 					.add_attribute("voter", msg_info.sender)
 					.add_attribute("votes", Uint128::from(user_stats.staked_votes))
-					.add_attribute("approve", approve.to_string())
+					.add_attribute("vote", approve.to_string())
 			)
 	)
 }
@@ -182,14 +188,14 @@ pub fn process_propose_transaction(
 	proposal_msgs.push(&msgs)?;
 	assert_eq!(proposal_infos.len(), proposal_msgs.len());
 
-	get_user_vote_info_store().set(
-		&(proposer.clone(), new_proposal_id),
+	get_proposal_user_vote_store().set(
+		&(new_proposal_id, proposer),
 		&(&CourtUserVoteInfoJsonable {
 			active_votes: user_stats.staked_votes.into(),
-			voted_for: true
+			vote: CourtUserVoteStatus::Approve
 		}).try_into()?
 	)?;
-	
+	get_user_active_proposal_id_set().add(&(proposer, new_proposal_id))?;
 	Ok(
 		Response::new()
 			.add_event(
@@ -202,7 +208,7 @@ pub fn process_propose_transaction(
 					.add_attribute("proposal_id", new_proposal_id.to_string())
 					.add_attribute("voter", proposer_addr)
 					.add_attribute("votes", Uint128::from(user_stats.staked_votes))
-					.add_attribute("approve", true.to_string())
+					.add_attribute("vote", "approve")
 			)
 	)
 }

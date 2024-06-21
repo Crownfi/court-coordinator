@@ -23,8 +23,6 @@ pub enum CourtContractError {
 	VotesActive,
 	#[error("You've already voted on this proposal")]
 	AlreadyVoted,
-	#[error("Your new votes cannot contradict your previous votes")]
-	VotingForBothSides,
 	#[error("Proposal status should be \"{expected}\" for this operation but it is currently \"{actual}\"")]
 	UnexpectedProposalStatus {
 		expected: TransactionProposalStatus,
@@ -41,7 +39,17 @@ pub enum CourtContractError {
 	#[error("This contract cannot safely operate with the amount of new shares minted")]
 	TooManyVotesToMint,
 	#[error("Doing this may result in this contract becoming unusable")]
-	WouldLockupContract
+	WouldLockupContract,
+	#[error("Invalid address \"{wrong_addr}\", an address beginning with \"0x\" is required for {proprety_name}")]
+	EvmAddressRequired {
+		wrong_addr: String,
+		proprety_name: String
+	},
+	#[error("Invalid address \"{wrong_addr}\", an address beginning with \"sei1\" is required for {proprety_name}")]
+	SeiAddressRequired {
+		wrong_addr: String,
+		proprety_name: String
+	}
 }
 
 impl<E> From<E> for CourtContractError where E: Into<StdError> {

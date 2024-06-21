@@ -3,7 +3,7 @@ use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::Minim
 
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalExecutionStatus, TransactionProposalStatus}, user::{get_all_user_votes, get_user_vote_info_store}}, workarounds::{mint_workaround, total_supply_workaround}};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalExecutionStatus, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_user_active_proposal_id_set}}, workarounds::{mint_workaround, total_supply_workaround}};
 
 use super::{enforce_unfunded, shares::votes_denom};
 
@@ -20,22 +20,22 @@ pub fn process_deactivate_votes(
 
 
 	let proposals = get_transaction_proposal_info_vec();
-	let user_vote_info_store = get_user_vote_info_store();
+	let active_user_proposals = get_user_active_proposal_id_set();
 
 	// this .take() is a little fugly, though the resolution of the following issue would help clean up the code:
 	// https://github.com/rust-lang/rust/issues/63065
- 	let user_vote_info_keys_iter = get_all_user_votes(
+ 	let user_vote_info_keys_iter = get_all_user_active_proposal_ids(
 		user
 	)?.take(limit.map(|limit| {limit as usize}).unwrap_or(usize::MAX));
 
-	for (proposal_id, _) in user_vote_info_keys_iter {
+	for proposal_id in user_vote_info_keys_iter {
 		let proposal = proposals.get(proposal_id)?.ok_or(
 			StdError::not_found(format!("Proposal {} which the user voted for doesn't exist?!", proposal_id))
 		)?;
 		if !proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config).is_finalized() {
 			return Err(CourtContractError::ProposalNotFinalized(proposal_id));
 		}
-		user_vote_info_store.remove(&(user.clone(), proposal_id));
+		active_user_proposals.remove(&(user.clone(), proposal_id));
 	}
 	Ok(
 		Response::new()

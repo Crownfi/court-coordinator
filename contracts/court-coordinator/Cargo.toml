@@ -25,3 +25,5 @@ sei-cosmwasm = {workspace = true}
 crownfi-cw-common = {workspace = true}
 serde = {workspace = true}
 bytemuck = {workspace = true}
+bitflags = {workspace = true}
+hex = {workspace = true}
