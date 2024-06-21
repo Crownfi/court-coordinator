@@ -1,6 +1,7 @@
-use cosmwasm_std::{to_json_binary, Binary, Coin, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions, storage::item::StoredItem};
 use cw2::set_contract_version;
+use cw_utils::nonpayable;
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
 use crate::{error::CourtContractError, msg::{CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote}, proposed_msg::ProposedCourtMsgJsonable, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, CourtAppConfigJsonable}, user::{get_all_proposal_user_votes, get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_stats_store, CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}, workarounds::{mint_to_workaround, total_supply_workaround}};
@@ -24,7 +25,7 @@ pub fn instantiate(
 	msg_info: MessageInfo,
 	msg: CourtInstantiateMsg,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	enforce_unfunded(&msg_info)?;
+	nonpayable(&msg_info)?;
 	set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
 	CourtAppConfig::try_from(
 		&CourtAppConfigJsonable {
@@ -39,6 +40,8 @@ pub fn instantiate(
 		}
 	)?.save()?;
 	let new_denom = votes_denom(&env);
+	let vote_share_symbol_lowercase = msg.vote_share_symbol.to_ascii_lowercase();
+	let vote_share_symbol_uppercase = msg.vote_share_symbol.to_ascii_uppercase();
 	Ok(
 		mint_to_workaround(
 			Response::new()
@@ -46,7 +49,33 @@ pub fn instantiate(
 				SeiMsg::CreateDenom {
 					subdenom: VOTES_SUBDENOM.to_string()
 				}
-			),
+			)
+			.add_message(SeiMsg::SetMetadata {
+				metadata: sei_cosmwasm::Metadata {
+					description: msg.vote_share_description,
+					denom_units: vec![
+						sei_cosmwasm::DenomUnit {
+							denom: new_denom.clone(),
+							exponent: 0,
+							aliases: vec![format!("u{vote_share_symbol_lowercase}"), format!("micro{vote_share_symbol_lowercase}")],
+						},
+						sei_cosmwasm::DenomUnit {
+							denom: format!("m{vote_share_symbol_lowercase}"),
+							exponent: 3,
+							aliases: vec![format!("milli{vote_share_symbol_lowercase}")],
+						},
+						sei_cosmwasm::DenomUnit {
+							denom: vote_share_symbol_lowercase.clone(),
+							exponent: 6,
+							aliases: vec![],
+						},
+					],
+					base: new_denom.clone(),
+					display: vote_share_symbol_lowercase.clone(),
+					name: msg.vote_share_name,
+					symbol: vote_share_symbol_uppercase,
+				},
+			}),
 			&new_denom,
 			&msg.shares_mint_receiver,
 			msg.shares_mint_amount.u128()
@@ -304,31 +333,4 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 			},
 		}
 	)
-}
-
-pub fn enforce_unfunded(msg_info: &MessageInfo) -> Result<(), CourtContractError> {
-	if msg_info.funds.len() > 0 {
-		return Err(
-			CourtContractError::UnexpectedFunds(msg_info.funds[0].denom.clone())
-		)
-	}
-	Ok(())
-}
-pub fn enforce_single_payment<'msg>(msg_info: &'msg MessageInfo, expected_denom: &'_ String) -> Result<&'msg Coin, CourtContractError> {
-    if msg_info.funds.len() == 0 {
-		return Err(
-			CourtContractError::TokenMissing(expected_denom.clone())
-		);
-	}
-	if msg_info.funds[0].denom != *expected_denom {
-		return Err(
-			CourtContractError::UnexpectedFunds(msg_info.funds[0].denom.clone())
-		);
-	}
-	if msg_info.funds.len() > 1 {
-		return Err(
-			CourtContractError::UnexpectedFunds(msg_info.funds[1].denom.clone())
-		);
-	}
-	return Ok(&msg_info.funds[0])
 }

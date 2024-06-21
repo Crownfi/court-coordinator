@@ -1,11 +1,12 @@
 use cosmwasm_std::{CosmosMsg, Event, MessageInfo, Response, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions};
 
+use cw_utils::nonpayable;
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
 use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalExecutionStatus, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_user_active_proposal_id_set}}, workarounds::{mint_workaround, total_supply_workaround}};
 
-use super::{enforce_unfunded, shares::votes_denom};
+use super::shares::votes_denom;
 
 pub fn process_deactivate_votes(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
@@ -13,7 +14,7 @@ pub fn process_deactivate_votes(
 	user: Option<SeiCanonicalAddr>,
 	limit: Option<u32>
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	enforce_unfunded(&msg_info)?;
+	nonpayable(&msg_info)?;
 	let app_config = CourtAppConfig::load_non_empty()?;
 	let token_supply = total_supply_workaround(&votes_denom(&env_info.env));
 	let user = user.unwrap_or(SeiCanonicalAddr::try_from(&msg_info.sender)?);
@@ -49,7 +50,7 @@ pub fn process_execute_proposal(
 	msg_info: MessageInfo,
 	proposal_id: u32
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	enforce_unfunded(&msg_info)?;
+	nonpayable(&msg_info)?;
 	let app_config = CourtAppConfig::load_non_empty()?;
 	let token_supply = total_supply_workaround(&votes_denom(&env_info.env));
 

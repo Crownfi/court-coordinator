@@ -1,4 +1,6 @@
+use crownfi_cw_common::impl_from_cosmwasm_std_error_common;
 use cosmwasm_std::StdError;
+use cw_utils::PaymentError;
 use thiserror::Error;
 
 use crate::state::app::TransactionProposalStatus;
@@ -6,15 +8,11 @@ use crate::state::app::TransactionProposalStatus;
 #[derive(Error, Debug, PartialEq)]
 pub enum CourtContractError {
 	#[error("{0}")]
-	Std(StdError),
+	Std(#[from] StdError),
+	#[error("Payment Error: {0}")]
+	PaymentError(#[from] PaymentError),
 	#[error("Permission denied: {0}")]
 	Unauthorized(String),
-	#[error("This instruction shouldn't have been funded with {0}")]
-	UnexpectedFunds(String),
-	#[error("Expected token {0} but got {1}")]
-	TokenMismatch(String, String),
-	#[error("Expected token {0} missing")]
-	TokenMissing(String),
 	#[error("Proposal {0} must have failed or have been passed and executed")]
 	ProposalNotFinalized(u32),
 	#[error("You don't have any votes staked")]
@@ -51,9 +49,4 @@ pub enum CourtContractError {
 		proprety_name: String
 	}
 }
-
-impl<E> From<E> for CourtContractError where E: Into<StdError> {
-	fn from(value: E) -> Self {
-		Self::Std(value.into())
-	}
-}
+impl_from_cosmwasm_std_error_common!(CourtContractError);

@@ -11,7 +11,7 @@ pub const CONFIG_NAMESPACE: &str = "app_config";
 #[derive(Debug, Clone, Copy, Zeroable, Pod)]
 #[repr(C)]
 pub struct CourtAppConfig {
-	allow_new_proposals: u8, // bool
+	allow_new_proposals: u8, // bool, can be turned into bit flags in the future
 	pub minimum_vote_proposal_percent: u8,
 	pub minimum_vote_turnout_percent: u8,
 	pub minimum_vote_pass_percent: u8,
@@ -156,7 +156,7 @@ pub enum TransactionProposalStatus {
 	Executed = 3,
 	/// The proposal passed but couldn't be executed before the expiry time
 	ExecutionExpired = 4,
-	/// The proposal was cancelled
+	/// The proposal was cancelled, this is the finalized state of "ExecutionExpired"
 	Cancelled = 5
 }
 // SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
@@ -209,8 +209,11 @@ impl std::fmt::Display for TransactionProposalStatus {
 #[serde(rename_all = "snake_case")]
 pub enum TransactionProposalExecutionStatus {
 	#[default]
+	/// Proposal has not been executed
 	NotExecuted = 0,
+	/// Proposal has been been executed
 	Executed = 1,
+	/// Proposal could not be executed
 	Cancelled = 2
 }
 // SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
@@ -307,7 +310,7 @@ impl TransactionProposalInfo {
 			u8::try_from(
 				// OVERFLOW SAFETY:
 				// The Mint function doesn't allow a total supply greater than 34028236692093846346337460743176821.
-				// Therefore multiplying by up to 10000 will not overflow.
+				// Therefore multiplying by up to 10000 will not overflow. (If we want to use bps some day)
 				// Proposals cannot be created by the contract unless the token supply is non-zero.
 				// By definition, the total votes for and against cannot exceed the total number existing votes.
 				(self.votes_for + self.votes_against) * 100 / token_supply

@@ -1,10 +1,11 @@
 use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions};
+use cw_utils::{must_pay, nonpayable};
 use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
 
 use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
 
-use super::{enforce_single_payment, shares::{votes_denom, votes_coin}, enforce_unfunded};
+use super::shares::{votes_denom, votes_coin};
 
 
 pub fn process_stake(
@@ -12,18 +13,18 @@ pub fn process_stake(
 	msg_info: MessageInfo
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
-	let user_payment = enforce_single_payment(&msg_info, &votes_denom(&env_info.env))?;
+	let user_payment_amount = must_pay(&msg_info, &votes_denom(&env_info.env))?;
 	let user_stats_map = get_user_stats_store();
 
 	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_sender)?;
-	user_stats.staked_votes = user_stats.staked_votes.checked_add(user_payment.amount.into()).unwrap();
+	user_stats.staked_votes = user_stats.staked_votes.checked_add(user_payment_amount.into()).unwrap();
 
 	Ok(
 		Response::new()
 			.add_event(
 				Event::new("stake")
 					.add_attribute("user", &msg_info.sender)
-					.add_attribute("new_amount", user_payment.amount)
+					.add_attribute("new_amount", user_payment_amount)
 					.add_attribute("user_total", Uint128::from(user_stats.staked_votes))
 			)
 	)
@@ -33,7 +34,7 @@ pub fn process_unstake(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
 	msg_info: MessageInfo
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	enforce_unfunded(&msg_info)?;
+	nonpayable(&msg_info)?;
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
 	let has_active_votes = get_all_user_active_proposal_ids(
 		msg_sender
@@ -71,7 +72,7 @@ pub fn process_vote(
 	proposal_id: u32,
 	approve: CourtUserVoteStatus
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	enforce_unfunded(&msg_info)?;
+	nonpayable(&msg_info)?;
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
 	let app_config = CourtAppConfig::load_non_empty()?;
 	let token_supply = total_supply_workaround(&votes_denom(&env_info.env));
@@ -147,7 +148,7 @@ pub fn process_propose_transaction(
 	msgs: Vec<ProposedCourtMsg>,
 	expiry_time_seconds: u32
 ) -> Result<Response<SeiMsg>, CourtContractError> {
-	enforce_unfunded(&msg_info)?;
+	nonpayable(&msg_info)?;
 	let proposer = SeiCanonicalAddr::try_from(&msg_info.sender)?;
 	let proposer_addr = msg_info.sender;
 

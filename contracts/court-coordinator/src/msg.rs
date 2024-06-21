@@ -18,6 +18,9 @@ pub struct CourtInstantiateMsg {
 	pub minimum_vote_pass_percent: u8,
 	pub max_proposal_expiry_time_seconds: u32,
 	pub execution_expiry_time_seconds: u32,
+	pub vote_share_name: String,
+	pub vote_share_symbol: String,
+	pub vote_share_description: String
 }
 
 #[cw_serde]

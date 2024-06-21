@@ -352,8 +352,8 @@ dependencies = [
 
 [[package]]
 name = "crownfi-cw-common"
-version = "0.4.2"
-source = "git+ssh://git@github.com/Crownfi/crownfi-sei-common.git?branch=main#a4c397e546e4024d93f487a0fcb4bb6cb9cd0028"
+version = "0.4.3"
+source = "git+ssh://git@github.com/Crownfi/crownfi-sei-common.git?branch=main#6645ba2fa2d75c5be7d2c04490d5cec55478d101"
 dependencies = [
  "bech32",
  "bnum",
@@ -372,7 +372,7 @@ dependencies = [
 [[package]]
 name = "crownfi-sei-sdk-autogen"
 version = "0.1.0"
-source = "git+ssh://git@github.com/Crownfi/crownfi-sei-common.git?branch=main#a4c397e546e4024d93f487a0fcb4bb6cb9cd0028"
+source = "git+ssh://git@github.com/Crownfi/crownfi-sei-common.git?branch=main#6645ba2fa2d75c5be7d2c04490d5cec55478d101"
 dependencies = [
  "convert_case",
  "cosmwasm-schema",

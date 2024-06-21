@@ -2,7 +2,6 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use cosmwasm_schema::schemars::{self, JsonSchema};
 use cosmwasm_std::{Addr, Binary, Coin, CosmosMsg, StdError, Uint128, WasmMsg};
 use crownfi_cw_common::{data_types::{asset::{FungibleAssetKind, FungibleAssetKindString}, canonical_addr::SeiCanonicalAddr}, utils::{bytes_to_ethereum_address, checksumify_ethereum_address, parse_ethereum_address}};
-use hex::ToHex;
 use sei_cosmwasm::SeiMsg;
 use serde::{Deserialize, Serialize};
 
@@ -67,12 +66,13 @@ pub enum ProposedCourtMsg {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ProposedCourtMsgJsonable {
-	/// Sends a coin
+	/// Sends a coin Native or contract-driven
 	SendCoin {
 		to: String,
 		denom: FungibleAssetKindString,
 		amount: Uint128
 	},
+	/// Execute an EVM contract, `value` is in asei
 	ExecuteEvmContract {
 		contract: String,
 		msg: Binary,
