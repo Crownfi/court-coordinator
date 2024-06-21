@@ -4,7 +4,7 @@ use cw2::set_contract_version;
 use cw_utils::nonpayable;
 use sei_cosmwasm::{SeiQueryWrapper, SeiMsg};
 
-use crate::{error::CourtContractError, msg::{CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote}, proposed_msg::ProposedCourtMsgJsonable, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, CourtAppConfigJsonable}, user::{get_all_proposal_user_votes, get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_stats_store, CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}, workarounds::{mint_to_workaround, total_supply_workaround}};
+use crate::{error::CourtContractError, msg::{CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote, CourtQueryUserWithActiveProposal}, proposed_msg::ProposedCourtMsgJsonable, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, CourtAppConfigJsonable}, user::{get_all_proposal_user_votes, get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}, workarounds::{mint_to_workaround, total_supply_workaround}};
 
 use self::{shares::{VOTES_SUBDENOM, votes_denom}, admin::AdminMsgExecutor, user::{process_stake, process_unstake, process_vote, process_propose_transaction}, permissionless::{process_deactivate_votes, process_execute_proposal}};
 
@@ -105,7 +105,6 @@ pub fn execute(
 						minimum_vote_pass_percent,
 						max_proposal_expiry_time_seconds,
 						execution_expiry_time_seconds,
-						admin
 					} => {
 						admin_executor.process_change_config(
 							&msg_info,
@@ -114,8 +113,11 @@ pub fn execute(
 							minimum_vote_pass_percent,
 							max_proposal_expiry_time_seconds,
 							execution_expiry_time_seconds,
-							admin
+
 						)?
+					},
+					CourtAdminExecuteMsg::ChangeAdmin { admin } => {
+						admin_executor.process_change_admin(admin)?
 					},
 					CourtAdminExecuteMsg::AllowNewProposals { allowed } => {
 						admin_executor.process_allow_new_proposals(&msg_info, allowed)?
@@ -288,6 +290,39 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 					)?
 				)?
 			},
+			CourtQueryMsg::GetUsersWithActiveProposals { after, limit, descending } => {
+				let iter = get_user_active_proposal_id_set().iter_range(
+					after.as_ref().filter(|_| {
+						!descending
+					}).map(|after| -> Result<_, StdError> {
+						Ok(((&after.user).try_into()?, after.proposal_id))
+					}).transpose()?,
+					after.as_ref().filter(|_| {
+						descending
+					}).map(|after| -> Result<_, StdError> {
+						Ok(((&after.user).try_into()?, after.proposal_id))
+					}).transpose()?,
+				)?.map(|(canon_addr, proposal_id)| -> Result<_, StdError> {
+					Ok(
+						CourtQueryUserWithActiveProposal {
+							user: canon_addr.try_into()?,
+							proposal_id
+						}
+					)
+				});
+				to_json_binary(
+					&if descending {
+						iter
+							.rev()
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<Result<Vec<CourtQueryUserWithActiveProposal>, _>>()?
+					}else{
+						iter
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<Result<Vec<CourtQueryUserWithActiveProposal>, _>>()?
+					}
+				)?
+			}
 			CourtQueryMsg::GetUserActiveProposals { user, skip, limit, descending } => {
 				let iter = get_all_user_active_proposal_ids(SeiCanonicalAddr::try_from(user)?)?;
 				to_json_binary(

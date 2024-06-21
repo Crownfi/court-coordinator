@@ -59,16 +59,6 @@ pub fn process_execute_proposal(
 		StdError::not_found(format!("Proposal {} does not exist", proposal_id))
 	)?;
 	let proposal_status = proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config);
-	if proposal_status == TransactionProposalStatus::ExecutionExpired {
-		proposal.set_execution_status(TransactionProposalExecutionStatus::Cancelled);
-		return Ok(
-			Response::new()
-				.add_event(
-					Event::new("proposal_cancelled")
-						.add_attribute("proposal_id", proposal_id.to_string())
-				)
-		)
-	}
 	proposal_status.enforce_status(TransactionProposalStatus::Passed)?;
 	proposal.set_execution_status(TransactionProposalExecutionStatus::Executed);
 	proposals.set(proposal_id, &proposal)?;

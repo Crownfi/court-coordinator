@@ -93,23 +93,6 @@ impl TryFrom<&CourtAppConfig> for CourtAppConfigJsonable {
 	}
 }
 
-pub const STATS_NAMESPACE: &str = "app_stats";
-#[derive(Debug, Clone, Copy, Default, Zeroable, Pod)]
-#[repr(C)]
-pub struct CourtAppStats {
-	pub latest_proposal_expiry_id: u32,
-	_unused: [u8; 4],
-	pub latest_proposal_expiry_timestamp_ms: u64,
-
-}
-impl_serializable_as_ref!(CourtAppStats);
-impl StoredItem for CourtAppStats {
-    fn namespace() -> &'static [u8] {
-        STATS_NAMESPACE.as_bytes()
-    }
-}
-
-
 const PROPOSAL_INFO_NAMESPACE: &str = "app_prop_i";
 const PROPOSAL_MSG_NAMESPACE: &str = "app_prop_m";
 
@@ -155,9 +138,7 @@ pub enum TransactionProposalStatus {
 	/// The proposal passed and the transaction has executed
 	Executed = 3,
 	/// The proposal passed but couldn't be executed before the expiry time
-	ExecutionExpired = 4,
-	/// The proposal was cancelled, this is the finalized state of "ExecutionExpired"
-	Cancelled = 5
+	ExecutionExpired = 4
 }
 // SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
 unsafe impl Zeroable for TransactionProposalStatus {}
@@ -167,7 +148,7 @@ impl TransactionProposalStatus {
 		match self {
 			TransactionProposalStatus::Rejected |
 			TransactionProposalStatus::Executed | 
-			TransactionProposalStatus::Cancelled => true,
+			TransactionProposalStatus::ExecutionExpired => true,
 			_ => false
 		}
 	}
@@ -197,9 +178,6 @@ impl std::fmt::Display for TransactionProposalStatus {
 			TransactionProposalStatus::ExecutionExpired => {
 				f.write_str("execution_expired")
 			},
-			TransactionProposalStatus::Cancelled => {
-				f.write_str("cancelled")
-			}
 		}
 	}
 }
@@ -212,9 +190,7 @@ pub enum TransactionProposalExecutionStatus {
 	/// Proposal has not been executed
 	NotExecuted = 0,
 	/// Proposal has been been executed
-	Executed = 1,
-	/// Proposal could not be executed
-	Cancelled = 2
+	Executed = 1
 }
 // SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
 unsafe impl Zeroable for TransactionProposalExecutionStatus {}
@@ -222,8 +198,7 @@ impl TransactionProposalExecutionStatus {
 	pub fn as_proposal_status(&self) -> Option<TransactionProposalStatus> {
 		match self {
 			TransactionProposalExecutionStatus::NotExecuted => None,
-			TransactionProposalExecutionStatus::Executed => Some(TransactionProposalStatus::Executed),
-			TransactionProposalExecutionStatus::Cancelled => Some(TransactionProposalStatus::Cancelled),
+			TransactionProposalExecutionStatus::Executed => Some(TransactionProposalStatus::Executed)
 		}
 	}
 }
@@ -232,8 +207,7 @@ impl From<u8> for TransactionProposalExecutionStatus {
 		match value {
 			0 => Self::NotExecuted,
 			1 => Self::Executed,
-			2 => Self::Cancelled,
-			_ => Self::Cancelled
+			_ => Self::Executed
 		}
 	}
 }

@@ -1,9 +1,9 @@
-use cosmwasm_std::{MessageInfo, Addr, Response, Uint128, StdError};
-use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions, storage::{item::StoredItem, OZeroCopy}};
+use cosmwasm_std::{MessageInfo, Addr, Response, Uint128};
+use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, storage::{item::StoredItem, OZeroCopy}};
 use cw_utils::nonpayable;
 use sei_cosmwasm::SeiMsg;
 
-use crate::{error::CourtContractError, state::app::{get_transaction_proposal_info_vec, CourtAppConfig, CourtAppStats}, workarounds::{mint_to_workaround, total_supply_workaround}};
+use crate::{error::CourtContractError, state::{app::CourtAppConfig, user::get_user_active_proposal_id_set}, workarounds::mint_to_workaround};
 
 use super::shares::votes_denom;
 
@@ -35,17 +35,11 @@ impl<'exec, Q: cosmwasm_std::CustomQuery> AdminMsgExecutor<'exec, Q> {
 		minimum_vote_pass_percent: Option<u8>,
 		max_proposal_expiry_time_seconds: Option<u32>,
 		execution_expiry_time_seconds: Option<u32>,
-		admin: Option<Addr>
 	) -> Result<Response<SeiMsg>, CourtContractError> {
 		nonpayable(msg_info)?;
-		let app_stats = CourtAppStats::load()?.unwrap_or_default();
-		let latest_proposal = get_transaction_proposal_info_vec()
-			.get(app_stats.latest_proposal_expiry_id)?.ok_or(StdError::not_found("latest proposal doesn't exist?!"))?;
-		
-		let current_timestamp_ms = self.env_info.env.block.time.millis();
-		let token_supply = total_supply_workaround(&votes_denom(&self.env_info.env));
-		if !latest_proposal.status(current_timestamp_ms, token_supply.u128(), &self.app_config).is_finalized() {
-			return Err(CourtContractError::ProposalNotFinalized(app_stats.latest_proposal_expiry_id));
+		if get_user_active_proposal_id_set().iter()?.next().is_some() {
+			// Easiest way to check if there are any active proposals
+			return Err(CourtContractError::VotesActive);
 		}
 		if let Some(minimum_vote_proposal_percent) = minimum_vote_proposal_percent {
 			self.app_config.minimum_vote_proposal_percent = minimum_vote_proposal_percent;
@@ -62,14 +56,19 @@ impl<'exec, Q: cosmwasm_std::CustomQuery> AdminMsgExecutor<'exec, Q> {
 		if let Some(execution_expiry_time_seconds) = execution_expiry_time_seconds {
 			self.app_config.execution_expiry_time_seconds = execution_expiry_time_seconds;
 		}
-		if let Some(admin) = admin  {
-			// A better check would be "are there any approved proposals which will restore proposals?"
-			// ...but this works for now
-			if !self.app_config.allow_new_proposals() && self.env_info.env.contract.address == admin {
-				return Err(CourtContractError::WouldLockupContract);
-			}
-			self.app_config.admin = admin.try_into()?;
+		self.app_config.save()?;
+		Ok(Response::new())
+	}
+	pub fn process_change_admin(
+		&mut self,
+		admin: Addr
+	) -> Result<Response<SeiMsg>, CourtContractError> {
+		// A better check would be "are there any approved proposals which will restore proposals?"
+		// ...but this works for now
+		if !self.app_config.allow_new_proposals() && self.env_info.env.contract.address == admin {
+			return Err(CourtContractError::WouldLockupContract);
 		}
+		self.app_config.admin = admin.try_into()?;
 		self.app_config.save()?;
 		Ok(Response::new())
 	}

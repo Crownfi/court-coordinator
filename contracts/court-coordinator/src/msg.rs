@@ -31,8 +31,10 @@ pub enum CourtAdminExecuteMsg {
 		minimum_vote_turnout_percent: Option<u8>,
 		minimum_vote_pass_percent: Option<u8>,
 		max_proposal_expiry_time_seconds: Option<u32>,
-		execution_expiry_time_seconds: Option<u32>,
-		admin: Option<Addr>
+		execution_expiry_time_seconds: Option<u32>
+	},
+	ChangeAdmin {
+		admin: Addr
 	},
 	AllowNewProposals {
 		allowed: bool
@@ -98,6 +100,12 @@ pub enum CourtQueryMsg {
 		user: Addr,
 		proposal_id: u32
 	},
+	#[returns(Vec<CourtQueryUserWithActiveProposal>)]
+	GetUsersWithActiveProposals {
+		after: Option<CourtQueryUserWithActiveProposal>,
+		limit: Option<u32>,
+		descending: bool
+	},
 	#[returns(Vec<u32>)]
 	GetUserActiveProposals {
 		user: Addr,
@@ -131,4 +139,10 @@ pub struct CourtQueryResponseTransactionProposal {
 pub struct CourtQueryResponseUserVote {
 	pub user: Addr,
 	pub info: CourtUserVoteInfoJsonable
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+pub struct CourtQueryUserWithActiveProposal {
+	pub user: Addr,
+	pub proposal_id: u32,
 }

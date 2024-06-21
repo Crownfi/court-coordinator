@@ -15,11 +15,11 @@ pub enum CourtContractError {
 	Unauthorized(String),
 	#[error("Proposal {0} must have failed or have been passed and executed")]
 	ProposalNotFinalized(u32),
-	#[error("You don't have any votes staked")]
+	#[error("No user votes staked")]
 	NoStakedVotes,
-	#[error("Your staked votes must not be tied to any proposals")]
+	#[error("Staked votes must not be tied to any proposals")]
 	VotesActive,
-	#[error("You've already voted on this proposal")]
+	#[error("User has already voted on this proposal")]
 	AlreadyVoted,
 	#[error("Proposal status should be \"{expected}\" for this operation but it is currently \"{actual}\"")]
 	UnexpectedProposalStatus {
@@ -30,7 +30,7 @@ pub enum CourtContractError {
 	EmptyProposal,
 	#[error("Proposal takes too long to expire")]
 	ProposalLivesTooLong,
-	#[error("You don't have enough staked votes to submit a proposal")]
+	#[error("User doesn't have enough staked votes to submit a proposal")]
 	InsufficientVotesForProposal,
 	#[error("New proposals currently aren't being accepted")]
 	NewProposalsNotAllowed,
