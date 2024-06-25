@@ -122,12 +122,12 @@ pub enum CourtQueryMsg {
 	}
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct CourtQueryResponseDenom {
 	pub votes: String
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct CourtQueryResponseTransactionProposal {
 	pub proposal_id: u32,
 	pub status: TransactionProposalStatus,
@@ -135,7 +135,7 @@ pub struct CourtQueryResponseTransactionProposal {
 	pub messages: Vec<ProposedCourtMsgJsonable>
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct CourtQueryResponseUserVote {
 	pub user: Addr,
 	pub info: CourtUserVoteInfoJsonable

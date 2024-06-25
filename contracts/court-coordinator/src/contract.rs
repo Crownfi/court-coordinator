@@ -13,7 +13,7 @@ pub mod admin;
 pub mod permissionless;
 pub mod user;
 
-const CONTRACT_NAME: &str = "crates.io:court-coordinator-contract";
+const CONTRACT_NAME: &str = "court-coordinator-contract";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 

@@ -8,7 +8,7 @@ use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg};
 
 pub const CONFIG_NAMESPACE: &str = "app_config";
 
-#[derive(Debug, Clone, Copy, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Zeroable, Pod)]
 #[repr(C)]
 pub struct CourtAppConfig {
 	allow_new_proposals: u8, // bool, can be turned into bit flags in the future
@@ -22,7 +22,7 @@ pub struct CourtAppConfig {
 	pub admin: SeiCanonicalAddr
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct CourtAppConfigJsonable {
 	pub allow_new_proposals: bool,
 	pub minimum_vote_proposal_percent: u8,
@@ -228,7 +228,7 @@ pub struct TransactionProposalInfo {
 	_unused: [u8; 7],
 	pub expiry_timestamp_ms: u64
 }
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct TransactionProposalInfoJsonable {
 	pub proposer: Addr,
 	pub votes_for: Uint128,

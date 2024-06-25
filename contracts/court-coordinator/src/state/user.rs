@@ -8,12 +8,12 @@ use serde::{Deserialize, Serialize};
 
 
 const USER_VOTES_NAMESPACE: &str = "user_stats";
-#[derive(Debug, Clone, Copy, Default, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Default, Zeroable, Pod, PartialEq, Eq)]
 #[repr(C)]
 pub struct CourtUserStats {
 	pub staked_votes: u128
 }
-#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, Default, PartialEq, Eq)]
 pub struct CourtUserStatsJsonable {
 	pub staked_votes: Uint128
 }
@@ -47,20 +47,20 @@ pub fn get_user_stats_store() -> StoredMap<SeiCanonicalAddr, CourtUserStats> {
 	StoredMap::new(USER_VOTES_NAMESPACE.as_ref())
 }
 
-#[derive(Debug, Clone, Copy, Default, Zeroable, Pod)]
+#[derive(Debug, Clone, Copy, Default, Zeroable, Pod, PartialEq, Eq)]
 #[repr(C)]
 pub struct CourtUserVoteInfo {
 	pub active_votes: u128,
 	vote: u8,
 	_unused: [u8; 15]
 }
-#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, JsonSchema, PartialEq, Eq)]
 pub struct CourtUserVoteInfoJsonable {
 	pub active_votes: Uint128,
 	pub vote: CourtUserVoteStatus
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Default, Deserialize, JsonSchema, PartialEq)]
+#[derive(Debug, Clone, Copy, Serialize, Default, Deserialize, JsonSchema, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CourtUserVoteStatus {
 	Oppose = 0,
