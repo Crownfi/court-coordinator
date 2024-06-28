@@ -61,8 +61,7 @@ pub fn mint_workaround(
 }
 
 pub fn total_supply_workaround(denom: &str) -> Uint128 {
-	// We'll never know if users have burned any tokens because the Sei team is too focused on half-baked so-called
-	// "marketable" features with bad UX to tell us.
+	// Sei's cosmwasm module is outdated; so we have to keep track ourselves for now
 	Uint128::new(
 		u128::from_le_bytes(
 			storage_read(denom.as_bytes()).map(|vec| {

@@ -99,7 +99,7 @@ const PROPOSAL_MSG_NAMESPACE: &str = "app_prop_m";
 /// Transaction proposal status, this is derived from the actual proposal struct rather than as a property.
 /// 
 /// The way this is derived is documented below.
-/// ```
+/// ```rust,ignore
 /// let proposal_status = if transaction_executed_status == TransactionExecutionStatus::Executed {
 /// 	TransactionProposalStatus::Executed
 /// } else if transaction_executed_status == TransactionExecutionStatus::Expired {

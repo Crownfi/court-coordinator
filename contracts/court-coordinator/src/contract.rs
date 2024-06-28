@@ -117,7 +117,7 @@ pub fn execute(
 						)?
 					},
 					CourtAdminExecuteMsg::ChangeAdmin { admin } => {
-						admin_executor.process_change_admin(admin)?
+						admin_executor.process_change_admin(&msg_info, admin)?
 					},
 					CourtAdminExecuteMsg::AllowNewProposals { allowed } => {
 						admin_executor.process_allow_new_proposals(&msg_info, allowed)?
@@ -148,7 +148,7 @@ pub fn execute(
 				process_propose_transaction(
 					env_info,
 					msg_info,
-					msgs.into_iter().map(|v| {v.try_into()}).collect::<Result<_, _>>()?,
+					msgs,
 					expiry_time_seconds
 				)?
 			},

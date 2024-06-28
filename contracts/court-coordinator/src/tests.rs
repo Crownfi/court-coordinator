@@ -193,11 +193,34 @@ mod contract_execution {
 	use super::*;
 	use cosmwasm_std::{coin, MessageInfo};
 use cw2::{get_contract_version, ContractVersion};
+use helpers::{get_known_vote_supply, new_env_and_instantiate};
 	use crate::{msg::*, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}};
 	mod helpers {
-		use crate::msg::CourtQueryResponseDenom;
+		use cosmwasm_std::Uint128;
+
+use crate::msg::CourtQueryResponseDenom;
 
 		use super::*;
+		pub fn new_env_and_instantiate(msg: Option<CourtInstantiateMsg>) -> MutexGuard<'static, (Env, SeiMockEnvDeps)> {
+			let mut env_deps = new_global_env();
+			instantiate(&mut env_deps, None, msg).unwrap();
+			assert_eq!(
+				query_config(&env_deps).unwrap(),
+				// Config is what's applied
+				CourtAppConfigJsonable {
+					allow_new_proposals: true,
+					minimum_vote_proposal_percent: 10,
+					minimum_vote_turnout_percent: 20,
+					minimum_vote_pass_percent: 50,
+					max_proposal_expiry_time_seconds: 7200,
+					execution_expiry_time_seconds: 3600,
+					last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+					admin: Addr::unchecked(ADMIN_ACCOUNT)
+				}
+			);
+			env_deps
+		}
+
 		pub fn instantiate(
 			env_deps: &mut (Env, SeiMockEnvDeps),
 			msg_info: Option<MessageInfo>,
@@ -409,17 +432,41 @@ use cw2::{get_contract_version, ContractVersion};
 				)?
 			)
 		}
-	
 
 		pub fn assert_only_authorized_instruction(
 			env_deps: &mut (Env, SeiMockEnvDeps),
-			msg_info: Option<MessageInfo>,
-			msg: CourtExecuteMsg,
-			authorized_users: &[&str],
+			funds: &[Coin],
 			unauthorized_users: &[&str],
+			authorized_users: &[&str],
+			msg: CourtExecuteMsg
 		) {
-
+			for user_str in unauthorized_users.iter() {
+				let execute_response = execute(
+					env_deps,
+					Some(MessageInfo {
+						sender: Addr::unchecked(user_str.to_string()),
+						funds: funds.into(),
+					}),
+					msg.clone()
+				);
+				assert!(execute_response.is_err_and(|err| {
+					// Typo won't be fixed until we upgrade to cosmwasm-std 2.x
+					err.to_string().starts_with("Permission denied:")
+				}));
+			}
+			for user_str in authorized_users.iter() {
+				let execute_response = execute(
+					env_deps,
+					Some(MessageInfo {
+						sender: Addr::unchecked(user_str.to_string()),
+						funds: funds.into(),
+					}),
+					msg.clone()
+				);
+				assert!(execute_response.is_ok());
+			}
 		}
+
 		pub fn assert_unfunded_instruction(
 			env_deps: &mut (Env, SeiMockEnvDeps),
 			msg_info: Option<MessageInfo>,
@@ -438,6 +485,7 @@ use cw2::{get_contract_version, ContractVersion};
 				Some(msg_info.clone()),
 				msg.clone()
 			);
+			assert!(execute_response.is_err());
 			assert!(execute_response.is_err_and(|err| {
 				// Typo won't be fixed until we upgrade to cosmwasm-std 2.x
 				err.to_string().contains("does no accept funds") ||
@@ -450,6 +498,7 @@ use cw2::{get_contract_version, ContractVersion};
 				Some(msg_info.clone()),
 				msg.clone()
 			);
+			assert!(execute_response.is_err());
 			assert!(execute_response.is_err_and(|err| {
 				// Typo won't be fixed until we upgrade to cosmwasm-std 2.x
 				err.to_string().contains("does no accept funds") ||
@@ -461,11 +510,168 @@ use cw2::{get_contract_version, ContractVersion};
 				Some(msg_info.clone()),
 				msg.clone()
 			);
+			assert!(execute_response.is_err());
 			assert!(execute_response.is_err_and(|err| {
 				// Typo won't be fixed until we upgrade to cosmwasm-std 2.x
 				err.to_string().contains("does no accept funds") ||
 				err.to_string().contains("does not accept funds")
 			}));
+		}
+
+
+		pub fn assert_must_pay(
+			env_deps: &mut (Env, SeiMockEnvDeps),
+			sender: &str,
+			msg: CourtExecuteMsg,
+			accepted_denom: &str
+		) {
+			let random_denom_1 = format!("factory/{}/ayylmao", RANDOM_CONTRACT);			
+			let random_denom_2 = format!("factory/{}/ayylmao", env_deps.0.contract.address);
+
+			let mut msg_info = MessageInfo {
+				sender: Addr::unchecked(sender),
+				funds: vec![]
+			};
+			
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_err());
+			assert!(execute_response.is_err_and(|err| {
+				err.to_string().contains("No funds sent")
+			}));
+
+			msg_info.funds.push(coin(0, accepted_denom));
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_err());
+			assert!(execute_response.is_err_and(|err| {
+				err.to_string().contains("No funds sent")
+			}));
+
+			msg_info.funds.pop();
+
+			msg_info.funds.push(coin(31337u128, &random_denom_1));
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_err());
+			assert!(execute_response.is_err_and(|err| {
+				// Must send reserve token
+				err.to_string().contains("Must send") && err.to_string().contains(accepted_denom)
+			}));
+
+
+			msg_info.funds.pop();
+
+			msg_info.funds.push(coin(31337u128, &random_denom_2));
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_err());
+			assert!(execute_response.is_err_and(|err| {
+				// Must send reserve token
+				err.to_string().contains("Must send") && err.to_string().contains(accepted_denom)
+			}));
+
+			msg_info.funds.push(coin(31337u128, &random_denom_1));
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_err());
+			assert!(execute_response.is_err_and(|err| {
+				// Must send reserve token
+				err.to_string().contains("more than one denomination")
+			}));
+
+			msg_info.funds.pop();
+			msg_info.funds.pop();
+			msg_info.funds.push(coin(1337u128, accepted_denom));
+			msg_info.funds.push(coin(1337u128, &random_denom_1));
+
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_err());
+			assert!(execute_response.is_err_and(|err| {
+				// Must send reserve token
+				err.to_string().contains("more than one denomination")
+			}));
+
+			msg_info.funds.pop();
+
+			let execute_response = execute(
+				env_deps,
+				Some(msg_info.clone()),
+				msg.clone()
+			);
+			assert!(execute_response.is_ok());
+		}
+
+		// Sei's cosmwasm is too outdated for contracts to know the total supply of a token. So... workaround!
+		pub fn set_known_vote_supply(
+			env_deps: &mut (Env, SeiMockEnvDeps),
+			amount: u128
+		) {
+			use cosmwasm_std::Storage;
+
+			let vote_shares_denom = format!("factory/{}/votes", &env_deps.0.contract.address);
+			env_deps.1.storage.set(vote_shares_denom.as_bytes(), &amount.to_le_bytes());
+		}
+
+		// Contract stores the number of tokens it minted here
+		pub fn get_known_vote_supply(
+			env_deps: &(Env, SeiMockEnvDeps)
+		) -> u128 {
+			use cosmwasm_std::Storage;
+
+			let vote_shares_denom = format!("factory/{}/votes", &env_deps.0.contract.address);
+			env_deps.1.storage.get(
+				vote_shares_denom.as_bytes()
+			).and_then(|bytes| {
+				Some(<u128>::from_le_bytes(bytes.try_into().ok()?))
+			}).unwrap_or_default()
+		}
+
+		pub fn execute_change_admin(
+			env_deps: &mut (Env, SeiMockEnvDeps),
+			sender: Option<&str>,
+			new_admin: &str
+		) {
+			execute(
+				env_deps,
+				Some(
+					MessageInfo { sender: Addr::unchecked(sender.unwrap_or(ADMIN_ACCOUNT)), funds: vec![] }
+				),
+				CourtExecuteMsg::Admin(CourtAdminExecuteMsg::ChangeAdmin { admin: Addr::unchecked(new_admin) })
+			).unwrap();
+		}
+
+		pub fn execute_allow_new_proposals(
+			env_deps: &mut (Env, SeiMockEnvDeps),
+			sender: Option<&str>,
+			allowed: bool
+		) {
+			execute(
+				env_deps,
+				Some(
+					MessageInfo { sender: Addr::unchecked(sender.unwrap_or(ADMIN_ACCOUNT)), funds: vec![] }
+				),
+				CourtExecuteMsg::Admin(CourtAdminExecuteMsg::AllowNewProposals { allowed })
+			).unwrap();
 		}
 	}
 
@@ -603,6 +809,8 @@ use cw2::{get_contract_version, ContractVersion};
 			})
 		);
 
+		assert_eq!(get_known_vote_supply(&env_deps), 1404438u128);
+
 		// Registers the metadata
 		assert!(
 			instantiate_response.messages.iter().any(|sub_msg| {
@@ -647,24 +855,567 @@ use cw2::{get_contract_version, ContractVersion};
 	}
 
 	#[test]
-	pub fn admin_change_configs() {
-		let mut env_deps = new_global_env();
-		let contract_addr = &env_deps.0.contract.address.clone();
-		let vote_shares_denom = format!("factory/{}/votes", contract_addr);
+	pub fn admin_change_config_unfunded_check() {
+		let mut env_deps = new_env_and_instantiate(None);
 
-		helpers::instantiate(
+		helpers::assert_unfunded_instruction(
 			&mut env_deps,
-			None,
-			None
+			Some(MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		)
+	}
+
+	#[test]
+	pub fn admin_change_config_authorized_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		
+		helpers::assert_only_authorized_instruction(
+			&mut env_deps,
+			&[],
+			&[
+				RANDOM_ACCOUNT_1,
+				RANDOM_ACCOUNT_2,
+				RANDOM_ACCOUNT_3,
+				RANDOM_ACCOUNT_4,
+				RANDOM_ACCOUNT_5,
+				SHARES_HOLDER_ACCOUNT_1,
+				SHARES_HOLDER_ACCOUNT_2,
+				SHARES_HOLDER_ACCOUNT_3,
+				SHARES_HOLDER_ACCOUNT_4,
+				SHARES_HOLDER_ACCOUNT_5
+			],
+			&[ADMIN_ACCOUNT],
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_change_config_correct() {
+		// Nothing changes if nothing is specified to change
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
 		).unwrap();
-		let exec_msg = CourtExecuteMsg::Admin(
-			CourtAdminExecuteMsg::ChangeConfig {
-				minimum_vote_proposal_percent: None,
-				minimum_vote_turnout_percent: None,
-				minimum_vote_pass_percent: None,
-				max_proposal_expiry_time_seconds: None,
-				execution_expiry_time_seconds: None
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 20,
+				minimum_vote_pass_percent: 50,
+				max_proposal_expiry_time_seconds: 7200,
+				execution_expiry_time_seconds: 3600,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
 			}
 		);
+
+		drop(env_deps); // Must drop otherwise we deadlock
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: Some(69),
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		).unwrap();
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 69,
+				minimum_vote_turnout_percent: 20,
+				minimum_vote_pass_percent: 50,
+				max_proposal_expiry_time_seconds: 7200,
+				execution_expiry_time_seconds: 3600,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
+			}
+		);
+
+		drop(env_deps); // Must drop otherwise we deadlock
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: Some(69),
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		).unwrap();
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 69,
+				minimum_vote_pass_percent: 50,
+				max_proposal_expiry_time_seconds: 7200,
+				execution_expiry_time_seconds: 3600,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
+			}
+		);
+
+		drop(env_deps); // Must drop otherwise we deadlock
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: Some(69),
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		).unwrap();
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 20,
+				minimum_vote_pass_percent: 69,
+				max_proposal_expiry_time_seconds: 7200,
+				execution_expiry_time_seconds: 3600,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
+			}
+		);
+
+		drop(env_deps); // Must drop otherwise we deadlock
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: Some(69),
+					execution_expiry_time_seconds: None
+				}
+			)
+		).unwrap();
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 20,
+				minimum_vote_pass_percent: 50,
+				max_proposal_expiry_time_seconds: 69,
+				execution_expiry_time_seconds: 3600,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
+			}
+		);
+
+		drop(env_deps); // Must drop otherwise we deadlock
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: Some(69)
+				}
+			)
+		).unwrap();
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 20,
+				minimum_vote_pass_percent: 50,
+				max_proposal_expiry_time_seconds: 7200,
+				execution_expiry_time_seconds: 69,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
+			}
+		);
+		env_deps.0.block.time = env_deps.0.block.time.plus_minutes(1);
+
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo {
+					sender: Addr::unchecked(ADMIN_ACCOUNT),
+					funds: vec![]
+				}
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: Some(69),
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		).unwrap();
+		assert_eq!(
+			helpers::query_config(&env_deps).unwrap(),
+			// Config is what's applied
+			CourtAppConfigJsonable {
+				allow_new_proposals: true,
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 20,
+				minimum_vote_pass_percent: 69,
+				max_proposal_expiry_time_seconds: 7200,
+				execution_expiry_time_seconds: 69,
+				last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
+				admin: Addr::unchecked(ADMIN_ACCOUNT)
+			}
+		);
+	}
+
+	#[test]
+	pub fn admin_change_config_only_when_no_pending_proposals() {
+		// Implement when proposal helper is implemented
+		todo!()
+	}
+
+	#[test]
+	pub fn admin_change_admin_unfunded_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+
+		helpers::assert_unfunded_instruction(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeAdmin { admin: Addr::unchecked(RANDOM_ACCOUNT_2) }
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_change_admin_authorized_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		
+		helpers::assert_only_authorized_instruction(
+			&mut env_deps,
+			&[],
+			&[
+				RANDOM_ACCOUNT_1,
+				RANDOM_ACCOUNT_2,
+				RANDOM_ACCOUNT_3,
+				RANDOM_ACCOUNT_4,
+				RANDOM_ACCOUNT_5,
+				SHARES_HOLDER_ACCOUNT_1,
+				SHARES_HOLDER_ACCOUNT_2,
+				SHARES_HOLDER_ACCOUNT_3,
+				SHARES_HOLDER_ACCOUNT_4,
+				SHARES_HOLDER_ACCOUNT_5
+			],
+			&[ADMIN_ACCOUNT],
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeAdmin { admin: Addr::unchecked(RANDOM_ACCOUNT_2) }
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_change_admin_cannot_be_self_while_voting_disabled() {
+		let mut env_deps = new_env_and_instantiate(None);
+		let contract_addr = &env_deps.0.contract.address.clone();
+		helpers::execute_allow_new_proposals(
+			&mut env_deps,
+			None,
+			false
+		);
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeAdmin { admin: contract_addr.clone() }
+			)
+		);
+		assert!(execute_response.is_err());
+		assert!(execute_response.is_err_and(|err| {
+			err.to_string().contains("may result in this contract becoming unusable")
+		}));
+	}
+
+	#[test]
+	pub fn admin_change_admin_new_guy_can_do_things() {
+		let mut env_deps = new_env_and_instantiate(None);
+		helpers::execute_change_admin(
+			&mut env_deps,
+			None,
+			RANDOM_ACCOUNT_1
+		);
+		helpers::assert_only_authorized_instruction(
+			&mut env_deps,
+			&[],
+			&[
+				ADMIN_ACCOUNT,
+				RANDOM_ACCOUNT_2,
+				RANDOM_ACCOUNT_3,
+				RANDOM_ACCOUNT_4,
+				RANDOM_ACCOUNT_5,
+				SHARES_HOLDER_ACCOUNT_1,
+				SHARES_HOLDER_ACCOUNT_2,
+				SHARES_HOLDER_ACCOUNT_3,
+				SHARES_HOLDER_ACCOUNT_4,
+				SHARES_HOLDER_ACCOUNT_5
+			],
+			&[RANDOM_ACCOUNT_1],
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: Some(69),
+					minimum_vote_turnout_percent: Some(69),
+					minimum_vote_pass_percent: Some(69),
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		);
+	}
+	
+	#[test]
+	pub fn admin_disallow_new_proposals_unfunded_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+
+		helpers::assert_unfunded_instruction(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::AllowNewProposals { allowed: false }
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_disallow_new_proposals_authorized_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		
+		helpers::assert_only_authorized_instruction(
+			&mut env_deps,
+			&[],
+			&[
+				RANDOM_ACCOUNT_1,
+				RANDOM_ACCOUNT_2,
+				RANDOM_ACCOUNT_3,
+				RANDOM_ACCOUNT_4,
+				RANDOM_ACCOUNT_5,
+				SHARES_HOLDER_ACCOUNT_1,
+				SHARES_HOLDER_ACCOUNT_2,
+				SHARES_HOLDER_ACCOUNT_3,
+				SHARES_HOLDER_ACCOUNT_4,
+				SHARES_HOLDER_ACCOUNT_5
+			],
+			&[ADMIN_ACCOUNT],
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::AllowNewProposals { allowed: false }
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_disallow_new_proposals_cant_be_self() {
+		let mut env_deps = new_env_and_instantiate(None);
+		let contract_addr = &env_deps.0.contract.address.clone();
+		helpers::execute_change_admin(
+			&mut env_deps,
+			None,
+			contract_addr.as_str()
+		);
+
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: contract_addr.clone(), funds: vec![] }
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::AllowNewProposals { allowed: false }
+			)
+		);
+		assert!(execute_response.is_err());
+		assert!(execute_response.is_err_and(|err| {
+			err.to_string().contains("may result in this contract becoming unusable")
+		}));
+	}
+
+	#[test]
+	pub fn admin_disallow_new_proposals_blocks_proposals() {
+		todo!()
+	}
+
+
+	#[test]
+	pub fn admin_mint_shares_unfunded_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+
+		helpers::assert_unfunded_instruction(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::MintShares { receiver: Addr::unchecked(RANDOM_ACCOUNT_1), amount: 31337u128.into() }
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_mint_shares_authorized_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		
+		helpers::assert_only_authorized_instruction(
+			&mut env_deps,
+			&[],
+			&[
+				RANDOM_ACCOUNT_1,
+				RANDOM_ACCOUNT_2,
+				RANDOM_ACCOUNT_3,
+				RANDOM_ACCOUNT_4,
+				RANDOM_ACCOUNT_5,
+				SHARES_HOLDER_ACCOUNT_1,
+				SHARES_HOLDER_ACCOUNT_2,
+				SHARES_HOLDER_ACCOUNT_3,
+				SHARES_HOLDER_ACCOUNT_4,
+				SHARES_HOLDER_ACCOUNT_5
+			],
+			&[ADMIN_ACCOUNT],
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::MintShares { receiver: Addr::unchecked(RANDOM_ACCOUNT_1), amount: 31337u128.into() }
+			)
+		);
+	}
+
+	#[test]
+	pub fn admin_mint_shares_minted_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		// Just a sanity check since that's what new_env_and_instantiate does by default
+		assert_eq!(get_known_vote_supply(&env_deps), 1000000u128);
+		let vote_shares_denom = helpers::query_denom(&env_deps).unwrap().votes;
+
+		let execute_reponse = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::MintShares { receiver: Addr::unchecked(RANDOM_ACCOUNT_2), amount: 31337u128.into() }
+			)
+		).unwrap();
+
+		// Mints the amount specified
+		assert!(
+			execute_reponse.messages.iter().any(|sub_msg| {
+				match &sub_msg.msg {
+					cosmwasm_std::CosmosMsg::Custom(sub_msg) => {
+						match sub_msg {
+							sei_cosmwasm::SeiMsg::MintTokens { amount } => {
+								*amount == coin(31337u128, &vote_shares_denom)
+							},
+							_ => {
+								false
+							}
+						}
+					}
+					_ => false
+				}
+			})
+		);
+
+		// Sends the amount of tokens minted to the user specified
+		assert!(
+			execute_reponse.messages.iter().any(|sub_msg| {
+				match &sub_msg.msg {
+					cosmwasm_std::CosmosMsg::Bank(sub_msg) => {
+						*sub_msg == cosmwasm_std::BankMsg::Send {
+							to_address: RANDOM_ACCOUNT_2.into(),
+							amount: vec![coin(31337u128, &vote_shares_denom)]
+						}
+					}
+					_ => false
+				}
+			})
+		);
+		assert_eq!(get_known_vote_supply(&env_deps), 1031337u128);
 	}
 }

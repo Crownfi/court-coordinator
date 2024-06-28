@@ -1,5 +1,5 @@
 use cosmwasm_std::{MessageInfo, Addr, Response, Uint128};
-use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, storage::{item::StoredItem, OZeroCopy}};
+use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions, storage::{item::StoredItem, OZeroCopy}};
 use cw_utils::nonpayable;
 use sei_cosmwasm::SeiMsg;
 
@@ -56,13 +56,16 @@ impl<'exec, Q: cosmwasm_std::CustomQuery> AdminMsgExecutor<'exec, Q> {
 		if let Some(execution_expiry_time_seconds) = execution_expiry_time_seconds {
 			self.app_config.execution_expiry_time_seconds = execution_expiry_time_seconds;
 		}
+		self.app_config.last_config_change_timestamp_ms = self.env_info.env.block.time.millis();
 		self.app_config.save()?;
 		Ok(Response::new())
 	}
 	pub fn process_change_admin(
 		&mut self,
+		msg_info: &MessageInfo,
 		admin: Addr
 	) -> Result<Response<SeiMsg>, CourtContractError> {
+		nonpayable(msg_info)?;
 		// A better check would be "are there any approved proposals which will restore proposals?"
 		// ...but this works for now
 		if !self.app_config.allow_new_proposals() && self.env_info.env.contract.address == admin {

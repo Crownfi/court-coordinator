@@ -1,9 +1,9 @@
 use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError};
 use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions};
 use cw_utils::{must_pay, nonpayable};
-use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
+use sei_cosmwasm::{SeiMsg, SeiQuerier, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsg, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::{ProposedCourtMsg, ProposedCourtMsgJsonable}, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
 
 use super::shares::{votes_denom, votes_coin};
 
@@ -145,7 +145,7 @@ pub fn process_vote(
 pub fn process_propose_transaction(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
 	msg_info: MessageInfo,
-	msgs: Vec<ProposedCourtMsg>,
+	msgs: Vec<ProposedCourtMsgJsonable>,
 	expiry_time_seconds: u32
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	nonpayable(&msg_info)?;
@@ -176,6 +176,48 @@ pub fn process_propose_transaction(
 	} else {
 		return Err(CourtContractError::InsufficientVotesForProposal);
 	}
+	let msgs = msgs.into_iter().enumerate().map(|(index, mut proposal)| {
+		match &mut proposal {
+			ProposedCourtMsgJsonable::SendCoin { to, denom, amount: _ } => {
+				if denom.is_erc20() {
+					if !to.starts_with("0x") {
+						*to = SeiQuerier::new(&env_info.querier).get_evm_address(to.clone())
+							.ok()
+							.filter(|response_addr| {
+								response_addr.evm_address.len() > 0 && response_addr.associated
+							})
+							.map(|response| {
+								response.evm_address
+							})
+							.ok_or(
+								CourtContractError::EvmAddressRequired {
+									wrong_addr: to.clone(),
+									proprety_name: format!("propose_transaction.msgs[{index}].to")
+								}
+							)?;
+					}
+				} else {
+					if to.starts_with("0x") {
+						*to = SeiQuerier::new(&env_info.querier).get_sei_address(to.clone())
+							.ok()
+							.filter(|response_addr| {
+								response_addr.sei_address.len() > 0 && response_addr.associated
+							})
+							.map(|response| {
+								response.sei_address
+							}).ok_or(
+								CourtContractError::SeiAddressRequired {
+									wrong_addr: to.clone(),
+									proprety_name: format!("propose_transaction.msgs[{index}].to")
+								}
+							)?;
+					}
+				}
+			}
+			_ => {}
+		}
+		Ok(proposal.try_into()?)
+	}).collect::<Result<_, CourtContractError>>()?;
 
 	let mut proposal_infos = get_transaction_proposal_info_vec();
 	let mut proposal_msgs = get_transaction_proposal_messages_vec();
