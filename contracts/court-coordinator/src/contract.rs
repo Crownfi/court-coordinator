@@ -316,6 +316,12 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 							.rev()
 							.take(limit.unwrap_or(u32::MAX) as usize)
 							.collect::<Result<Vec<CourtQueryUserWithActiveProposal>, _>>()?
+					}else if after.is_some() {
+						// "start" is inclusive while "end" is exclusive
+						iter
+							.skip(1)
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<Result<Vec<CourtQueryUserWithActiveProposal>, _>>()?
 					}else{
 						iter
 							.take(limit.unwrap_or(u32::MAX) as usize)
@@ -343,8 +349,8 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 			CourtQueryMsg::GetProposalUserVotes { proposal_id, after, limit, descending } => {
 				let iter = get_all_proposal_user_votes(
 					proposal_id,
-					after.as_ref().filter(|_| {!descending}).map(|addr| {addr.try_into()}).transpose()?,
 					after.as_ref().filter(|_| {descending}).map(|addr| {addr.try_into()}).transpose()?,
+					after.as_ref().filter(|_| {!descending}).map(|addr| {addr.try_into()}).transpose()?,
 				)?.map(|(addr, info)| {
 					Ok(
 						CourtQueryResponseUserVote {
@@ -357,6 +363,12 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 					&if descending {
 						iter
 							.rev()
+							.take(limit.unwrap_or(u32::MAX) as usize)
+							.collect::<StdResult<Vec<CourtQueryResponseUserVote>>>()?
+					}else if after.is_some(){
+						// "start" is inclusive while "end" is exclusive
+						iter
+							.skip(1)
 							.take(limit.unwrap_or(u32::MAX) as usize)
 							.collect::<StdResult<Vec<CourtQueryResponseUserVote>>>()?
 					}else{

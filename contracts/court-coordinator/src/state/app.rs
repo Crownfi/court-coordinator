@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 use bytemuck::{Pod, Zeroable};
 use cosmwasm_schema::schemars::{self, JsonSchema};
 use cosmwasm_std::{Addr, StdError, Uint128};
@@ -131,14 +133,16 @@ pub enum TransactionProposalStatus {
 	/// Votes are still being collected
 	#[default]
 	Pending = 0,
-	/// The proposed transaction will not be executed
+	/// The proposed transaction did not receive enough positive votes
 	Rejected = 1,
-	/// The proposed transaction will be executed, but hasn't yet
+	/// The proposed transaction was approved, but hasn't been executed yet
 	Passed = 2,
 	/// The proposal passed and the transaction has executed
 	Executed = 3,
 	/// The proposal passed but couldn't be executed before the expiry time
-	ExecutionExpired = 4
+	ExecutionExpired = 4,
+	/// Either "Rejected" or "ExecutionExpired", but cannot tell due to a change in the voting config
+	RejectedOrExpired = 5
 }
 // SAFTY: TransactionProposalStatus::Pending is explicitly defined as 0
 unsafe impl Zeroable for TransactionProposalStatus {}
@@ -148,7 +152,8 @@ impl TransactionProposalStatus {
 		match self {
 			TransactionProposalStatus::Rejected |
 			TransactionProposalStatus::Executed | 
-			TransactionProposalStatus::ExecutionExpired => true,
+			TransactionProposalStatus::ExecutionExpired |
+			TransactionProposalStatus::RejectedOrExpired => true,
 			_ => false
 		}
 	}
@@ -177,6 +182,9 @@ impl std::fmt::Display for TransactionProposalStatus {
 			},
 			TransactionProposalStatus::ExecutionExpired => {
 				f.write_str("execution_expired")
+			},
+			TransactionProposalStatus::RejectedOrExpired => {
+				f.write_str("rejected_or_expired")
 			},
 		}
 	}
@@ -262,9 +270,8 @@ impl TransactionProposalInfo {
 		if let Some(status) = self.execution_status().as_proposal_status() {
 			status
 		} else if self.expiry_timestamp_ms < app_config.last_config_change_timestamp_ms {
-			// The pass threshold may have changed, but that's not relevant to when the transaction was created.
-			// Note: last_config_change_timestamp_ms cannot be incremented before proposals are fully executed.
-			TransactionProposalStatus::Rejected
+			// Note: last_config_change_timestamp_ms cannot be incremented while there are any non-finalized proposals
+			TransactionProposalStatus::RejectedOrExpired
 		} else if current_timestamp_ms < self.expiry_timestamp_ms {
 			let total_vote_for_percent_of_supply = u8::try_from(self.votes_for * 100 / token_supply).unwrap();
 			let total_turnout_percent = u8::try_from(

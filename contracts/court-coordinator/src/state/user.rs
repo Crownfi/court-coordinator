@@ -63,19 +63,19 @@ pub struct CourtUserVoteInfoJsonable {
 #[derive(Debug, Clone, Copy, Serialize, Default, Deserialize, JsonSchema, PartialEq, Eq)]
 #[repr(u8)]
 pub enum CourtUserVoteStatus {
-	Oppose = 0,
-	Approve = 1,
 	#[default]
-	Abstain = 2
+	Abstain = 0,
+	Approve = 1,
+	Oppose = 2,
 }
 // SAFTY: is a u8 and has a varient set to "0"
 unsafe impl Zeroable for CourtUserVoteStatus {}
 impl From<u8> for CourtUserVoteStatus {
 	fn from(value: u8) -> Self{
 		match value {
-			0 => CourtUserVoteStatus::Oppose,
+			0 => CourtUserVoteStatus::Abstain,
 			1 => CourtUserVoteStatus::Approve,
-			2 => CourtUserVoteStatus::Abstain,
+			2 => CourtUserVoteStatus::Oppose,
 			_ => CourtUserVoteStatus::Abstain
 		}
 	}
@@ -150,15 +150,18 @@ pub fn get_proposal_user_vote_store() -> StoredMap<(u32, SeiCanonicalAddr), Cour
 	StoredMap::new(USER_PROPOSAL_VOTES_NAMESPACE.as_ref())
 }
 
+/// Gets all the users who voted for a proposal
+///
+/// `start` is inclusive while `end` is exclusive
 pub fn get_all_proposal_user_votes(
 	proposal_id: u32,
-	after: Option<SeiCanonicalAddr>,
-	before: Option<SeiCanonicalAddr>
+	start: Option<SeiCanonicalAddr>,
+	end: Option<SeiCanonicalAddr>
 ) -> Result<StoredMapIter<SeiCanonicalAddr, CourtUserVoteInfo>, StdError> {
 	StoredMapIter::new(
 		USER_PROPOSAL_VOTES_NAMESPACE.as_ref(),
 		proposal_id,
-		after,
-		before
+		start,
+		end
 	)
 }

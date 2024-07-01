@@ -188,32 +188,31 @@ const RANDOM_ACCOUNT_2: &str = "sei12fskuer0d5s8qmr9vgsxummjd45k2gpjjfknr8";
 const RANDOM_ACCOUNT_3: &str = "sei12fskuer0d5s8qmr9vgsxummjd45k2gpn0lzx74";
 const RANDOM_ACCOUNT_4: &str = "sei12fskuer0d5s8qmr9vgsxummjd45k2gp5wx4kls";
 const RANDOM_ACCOUNT_5: &str = "sei12fskuer0d5s8qmr9vgsxummjd45k2gp4nsprzz";
+const RANDOM_EVM_ACCOUNT_1: &str = "0x69207370696c6C206d79206472696E6b20545F54";
 
 mod contract_execution {
 	use super::*;
 	use cosmwasm_std::{coin, MessageInfo};
-use cw2::{get_contract_version, ContractVersion};
-use helpers::{get_known_vote_supply, new_env_and_instantiate};
-	use crate::{msg::*, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable}}};
+	use cw2::{get_contract_version, ContractVersion};
+	use helpers::{get_known_vote_supply, new_env_and_instantiate};
+	use crate::{msg::*, proposed_msg::ProposedCourtMsgJsonable, state::{app::{CourtAppConfigJsonable, TransactionProposalInfoJsonable, TransactionProposalStatus, TransactionProposalExecutionStatus}, user::{CourtUserStatsJsonable, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}};
 	mod helpers {
-		use cosmwasm_std::Uint128;
+		
 
-use crate::msg::CourtQueryResponseDenom;
-
-		use super::*;
+use super::*;
 		pub fn new_env_and_instantiate(msg: Option<CourtInstantiateMsg>) -> MutexGuard<'static, (Env, SeiMockEnvDeps)> {
 			let mut env_deps = new_global_env();
-			instantiate(&mut env_deps, None, msg).unwrap();
+			instantiate(&mut env_deps, None, msg.clone()).unwrap();
 			assert_eq!(
 				query_config(&env_deps).unwrap(),
 				// Config is what's applied
 				CourtAppConfigJsonable {
 					allow_new_proposals: true,
-					minimum_vote_proposal_percent: 10,
-					minimum_vote_turnout_percent: 20,
-					minimum_vote_pass_percent: 50,
-					max_proposal_expiry_time_seconds: 7200,
-					execution_expiry_time_seconds: 3600,
+					minimum_vote_proposal_percent: msg.as_ref().map(|msg| {msg.minimum_vote_proposal_percent}).unwrap_or(10),
+					minimum_vote_turnout_percent: msg.as_ref().map(|msg| {msg.minimum_vote_turnout_percent}).unwrap_or(20),
+					minimum_vote_pass_percent: msg.as_ref().map(|msg| {msg.minimum_vote_pass_percent}).unwrap_or(50),
+					max_proposal_expiry_time_seconds: msg.as_ref().map(|msg| {msg.max_proposal_expiry_time_seconds}).unwrap_or(7200),
+					execution_expiry_time_seconds: msg.as_ref().map(|msg| {msg.execution_expiry_time_seconds}).unwrap_or(3600),
 					last_config_change_timestamp_ms: env_deps.0.block.time.millis(),
 					admin: Addr::unchecked(ADMIN_ACCOUNT)
 				}
@@ -236,7 +235,7 @@ use crate::msg::CourtQueryResponseDenom;
 				CourtInstantiateMsg {
 					admin: msg_info.sender.clone(),
 					shares_mint_amount: 1000000u128.into(),
-					shares_mint_receiver: msg_info.sender.clone(),
+					shares_mint_receiver: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
 					minimum_vote_proposal_percent: 10,
 					minimum_vote_turnout_percent: 20,
 					minimum_vote_pass_percent: 50,
@@ -350,31 +349,31 @@ use crate::msg::CourtQueryResponseDenom;
 		}
 		pub fn query_user_stats(
 			env_deps: &(Env, SeiMockEnvDeps),
-			user: Addr
-		) -> Result<Vec<CourtUserStatsJsonable>, CourtContractError> {
+			user: &str
+		) -> Result<CourtUserStatsJsonable, CourtContractError> {
 			let env = env_deps.0.clone();
 			Ok(
 				from_json(
 					crate::contract::query(
 						env_deps.1.as_ref().into_empty(),
 						env,
-						CourtQueryMsg::UserStats { user }
+						CourtQueryMsg::UserStats { user: Addr::unchecked(user) }
 					)?
 				)?
 			)
 		}
 		pub fn query_user_vote_info(
 			env_deps: &(Env, SeiMockEnvDeps),
-			user: Addr,
+			user: &str,
 			proposal_id: u32
-		) -> Result<Vec<CourtUserVoteInfoJsonable>, CourtContractError> {
+		) -> Result<CourtUserVoteInfoJsonable, CourtContractError> {
 			let env = env_deps.0.clone();
 			Ok(
 				from_json(
 					crate::contract::query(
 						env_deps.1.as_ref().into_empty(),
 						env,
-						CourtQueryMsg::UserVoteInfo { user, proposal_id }
+						CourtQueryMsg::UserVoteInfo { user: Addr::unchecked(user), proposal_id }
 					)?
 				)?
 			)
@@ -398,7 +397,7 @@ use crate::msg::CourtQueryResponseDenom;
 		}
 		pub fn query_get_user_active_proposals(
 			env_deps: &(Env, SeiMockEnvDeps),
-			user: Addr,
+			user: &str,
 			skip: Option<u32>,
 			limit: Option<u32>,
 			descending: bool
@@ -409,7 +408,12 @@ use crate::msg::CourtQueryResponseDenom;
 					crate::contract::query(
 						env_deps.1.as_ref().into_empty(),
 						env,
-						CourtQueryMsg::GetUserActiveProposals { user, skip, limit, descending }
+						CourtQueryMsg::GetUserActiveProposals {
+							user: Addr::unchecked(user),
+							skip,
+							limit,
+							descending
+						}
 					)?
 				)?
 			)
@@ -417,7 +421,7 @@ use crate::msg::CourtQueryResponseDenom;
 		pub fn query_get_proposal_user_votes(
 			env_deps: &(Env, SeiMockEnvDeps),
 			proposal_id: u32,
-			after: Option<Addr>,
+			after: Option<&str>,
 			limit: Option<u32>,
 			descending: bool
 		) -> Result<Vec<CourtQueryResponseUserVote>, CourtContractError> {
@@ -427,7 +431,12 @@ use crate::msg::CourtQueryResponseDenom;
 					crate::contract::query(
 						env_deps.1.as_ref().into_empty(),
 						env,
-						CourtQueryMsg::GetProposalUserVotes { proposal_id, after, limit, descending }
+						CourtQueryMsg::GetProposalUserVotes {
+							proposal_id,
+							after: after.map(|addr| {Addr::unchecked(addr)}),
+							limit,
+							descending
+						}
 					)?
 				)?
 			)
@@ -517,7 +526,6 @@ use crate::msg::CourtQueryResponseDenom;
 				err.to_string().contains("does not accept funds")
 			}));
 		}
-
 
 		pub fn assert_must_pay(
 			env_deps: &mut (Env, SeiMockEnvDeps),
@@ -672,6 +680,55 @@ use crate::msg::CourtQueryResponseDenom;
 				),
 				CourtExecuteMsg::Admin(CourtAdminExecuteMsg::AllowNewProposals { allowed })
 			).unwrap();
+		}
+
+		pub fn execute_stake_votes(
+			env_deps: &mut (Env, SeiMockEnvDeps),
+			sender: &str,
+			amount: u128
+		) {
+			let vote_shares_denom = query_denom(&env_deps).unwrap().votes;
+			let previous_stake_amount = query_user_stats(&env_deps, sender).unwrap().staked_votes.u128();
+			execute(
+				env_deps,
+				Some(
+					MessageInfo { sender: Addr::unchecked(sender), funds: vec![coin(amount, &vote_shares_denom)] }
+				),
+				CourtExecuteMsg::Stake
+			).unwrap();
+
+			let stake_amount_increase = query_user_stats(&env_deps, sender).unwrap().staked_votes.u128()
+				.saturating_sub(previous_stake_amount);
+			assert_eq!(amount, stake_amount_increase);
+		}
+	
+		pub fn execute_propose_transaction(
+			env_deps: &mut (Env, SeiMockEnvDeps),
+			sender: &str,
+			msgs: Vec<ProposedCourtMsgJsonable>,
+			expiry_time_seconds: u32
+		) {
+			let user_staked_votes = query_user_stats(&env_deps, sender).unwrap().staked_votes;
+			let new_proposal_id = query_proposal_amount(&env_deps).unwrap();
+			let execute_result = execute(
+				env_deps,
+				Some(
+					MessageInfo { sender: Addr::unchecked(sender), funds: vec![] }
+				),
+				CourtExecuteMsg::ProposeTransaction { msgs, expiry_time_seconds }
+			).unwrap();
+
+			assert_eq!(execute_result.messages.len(), 0);
+			assert_eq!(execute_result.events, vec![
+				cosmwasm_std::Event::new("proposal")
+					.add_attribute("proposal_id", new_proposal_id.to_string())
+					.add_attribute("proposer", sender),
+				cosmwasm_std::Event::new("vote")
+					.add_attribute("proposal_id", new_proposal_id.to_string())
+					.add_attribute("voter", sender)
+					.add_attribute("votes", user_staked_votes)
+					.add_attribute("vote", "approve")
+			]);
 		}
 	}
 
@@ -1154,8 +1211,64 @@ use crate::msg::CourtQueryResponseDenom;
 
 	#[test]
 	pub fn admin_change_config_only_when_no_pending_proposals() {
-		// Implement when proposal helper is implemented
-		todo!()
+		let mut env_deps = helpers::new_env_and_instantiate(None);
+		
+		// Sanity tests for current config we're testing against
+		assert_eq!(helpers::query_config(&env_deps).unwrap().minimum_vote_proposal_percent, 10);
+		assert_eq!(helpers::query_config(&env_deps).unwrap().max_proposal_expiry_time_seconds, 7200);
+		assert_eq!(helpers::get_known_vote_supply(&env_deps), 1000000);
+
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 100000);
+		helpers::execute_propose_transaction(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			vec![ProposedCourtMsgJsonable::SendCoin {
+				to: RANDOM_ACCOUNT_1.into(),
+				denom: "usei".into(),
+				amount: 1337u128.into()
+			}],
+			1200
+		);
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		);
+		assert!(execute_response.is_err_and(|err| {
+			err.to_string().contains("votes must not be tied to any proposals")
+		}));
+		env_deps.0.block.time = env_deps.0.block.time.plus_days(69);
+
+		helpers::execute(
+			&mut env_deps,
+			None,
+			CourtExecuteMsg::DeactivateVotes { user: Some(Addr::unchecked(SHARES_HOLDER_ACCOUNT_1)), limit: None }
+		).unwrap();
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(ADMIN_ACCOUNT), funds: vec![] }
+			),
+			CourtExecuteMsg::Admin(
+				CourtAdminExecuteMsg::ChangeConfig {
+					minimum_vote_proposal_percent: None,
+					minimum_vote_turnout_percent: None,
+					minimum_vote_pass_percent: None,
+					max_proposal_expiry_time_seconds: None,
+					execution_expiry_time_seconds: None
+				}
+			)
+		).unwrap();
 	}
 
 	#[test]
@@ -1323,9 +1436,65 @@ use crate::msg::CourtQueryResponseDenom;
 
 	#[test]
 	pub fn admin_disallow_new_proposals_blocks_proposals() {
-		todo!()
+		let mut env_deps = new_env_and_instantiate(Some(
+			CourtInstantiateMsg {
+				admin: Addr::unchecked(ADMIN_ACCOUNT),
+				shares_mint_amount: 1000000u128.into(),
+				shares_mint_receiver: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2),
+				minimum_vote_proposal_percent: 10,
+				minimum_vote_turnout_percent: 10,
+				minimum_vote_pass_percent: 50,
+				max_proposal_expiry_time_seconds: 86400,
+				execution_expiry_time_seconds: 86400,
+				vote_share_name: "Test vote token".into(),
+				vote_share_symbol: "TVT".into(),
+				vote_share_description: "Test vote token".into()
+			}
+		));
+		// let vote_shares_denom = helpers::query_denom(&env_deps).unwrap().votes;
+		helpers::execute_stake_votes(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_2,
+			200000u128
+		);
+		helpers::execute_allow_new_proposals(&mut env_deps, None, false);
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), funds: vec![] }
+			),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![
+					ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_1.into(),
+						denom: "usei".into(),
+						amount: 31337u128.into() }
+				],
+				expiry_time_seconds: 3600
+			}
+		);
+		assert!(
+			execute_response.is_err_and(|err| {
+				err.to_string().contains("proposals currently aren't being accepted")
+			})
+		);
+		helpers::execute_allow_new_proposals(&mut env_deps, None, true);
+		helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), funds: vec![] }
+			),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![
+					ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_1.into(),
+						denom: "usei".into(),
+						amount: 31337u128.into() }
+				],
+				expiry_time_seconds: 3600
+			}
+		).unwrap();
 	}
-
 
 	#[test]
 	pub fn admin_mint_shares_unfunded_check() {
@@ -1418,4 +1587,817 @@ use crate::msg::CourtQueryResponseDenom;
 		);
 		assert_eq!(get_known_vote_supply(&env_deps), 1031337u128);
 	}
+
+	#[test]
+	pub fn user_stake_votes_correct_tokens_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		let contract_addr = &env_deps.0.contract.address.clone();
+		let vote_shares_denom = format!("factory/{}/votes", contract_addr);
+
+		helpers::assert_must_pay(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			CourtExecuteMsg::Stake,
+			&vote_shares_denom
+		);
+	}
+
+	#[test]
+	pub fn user_stake_votes_info_updated() {
+		let mut env_deps = new_env_and_instantiate(None);
+		let contract_addr = &env_deps.0.contract.address.clone();
+		let vote_shares_denom = format!("factory/{}/votes", contract_addr);
+
+		assert_eq!(
+			helpers::query_user_stats(
+				&mut env_deps,
+				SHARES_HOLDER_ACCOUNT_1
+			).unwrap(),
+			CourtUserStatsJsonable {
+				staked_votes: 0u128.into()
+			}
+		);
+
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![coin(31337, &vote_shares_denom)] }
+			),
+			CourtExecuteMsg::Stake
+		).unwrap();
+
+		assert_eq!(
+			helpers::query_user_stats(
+				&mut env_deps,
+				SHARES_HOLDER_ACCOUNT_1
+			).unwrap(),
+			CourtUserStatsJsonable {
+				staked_votes: 31337u128.into()
+			}
+		);
+		assert_eq!(
+			execute_response.events,
+			vec![
+				cosmwasm_std::Event::new("stake")
+					.add_attribute("user", SHARES_HOLDER_ACCOUNT_1)
+					.add_attribute("user_new_votes", 31337.to_string())
+					.add_attribute("user_total_votes", 31337.to_string())
+			]
+		);
+
+
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![coin(8663, &vote_shares_denom)] }
+			),
+			CourtExecuteMsg::Stake
+		).unwrap();
+
+		assert_eq!(
+			helpers::query_user_stats(
+				&mut env_deps,
+				SHARES_HOLDER_ACCOUNT_1
+			).unwrap(),
+			CourtUserStatsJsonable {
+				staked_votes: 40000u128.into()
+			}
+		);
+		assert_eq!(
+			execute_response.events,
+			vec![
+				cosmwasm_std::Event::new("stake")
+					.add_attribute("user", SHARES_HOLDER_ACCOUNT_1)
+					.add_attribute("user_new_votes", 8663.to_string())
+					.add_attribute("user_total_votes", 40000.to_string())
+			]
+		);
+	}
+
+	#[test]
+	pub fn user_unstake_votes_unfunded_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+
+		helpers::assert_unfunded_instruction(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::Unstake
+		);
+	}
+
+	#[test]
+	pub fn user_unstake_votes_must_have_staked_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		assert!(
+			helpers::execute(
+				&mut env_deps,
+				Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+				CourtExecuteMsg::Unstake
+			).is_err_and(|err| {
+				err.to_string() == "No user votes staked"
+			})
+		);
+	}
+
+	#[test]
+	pub fn user_unstake_votes_only_when_not_in_pending_proposals() {
+		let mut env_deps = new_env_and_instantiate(None);
+		// Sanity tests for current config we're testing against
+		assert_eq!(helpers::query_config(&env_deps).unwrap().minimum_vote_proposal_percent, 10);
+		assert_eq!(helpers::query_config(&env_deps).unwrap().max_proposal_expiry_time_seconds, 7200);
+		assert_eq!(helpers::get_known_vote_supply(&env_deps), 1000000);
+
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 100000);
+		helpers::execute_propose_transaction(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			vec![ProposedCourtMsgJsonable::SendCoin {
+				to: RANDOM_ACCOUNT_1.into(),
+				denom: "usei".into(),
+				amount: 1337u128.into()
+			}],
+			1200
+		);
+		assert!(
+			helpers::execute(
+				&mut env_deps,
+				Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+				CourtExecuteMsg::Unstake
+			).is_err_and(|err| {
+				err.to_string() == "Staked votes must not be tied to any proposals"
+			})
+		);
+	}
+
+	#[test]
+	pub fn user_unstake_votes_tokens_actually_returned() {
+		let mut env_deps = new_env_and_instantiate(None);
+		let vote_shares_denom = helpers::query_denom(&env_deps).unwrap().votes;
+		let user1_stake_amount_1 = 2147u128;
+		let user1_stake_amount_2 = 2563u128;
+		let user1_stake_amount_total = 4710u128;
+
+		let user2_stake_amount_1 = 567u128;
+		let user2_stake_amount_2 = 2531u128;
+		let user2_stake_amount_total = 3098u128;
+
+		helpers::execute_stake_votes(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			user1_stake_amount_1
+		);
+		helpers::execute_stake_votes(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_2,
+			user2_stake_amount_1
+		);
+		helpers::execute_stake_votes(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			user1_stake_amount_2
+		);
+		helpers::execute_stake_votes(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_2,
+			user2_stake_amount_2
+		);
+
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), funds: vec![] }
+			),
+			CourtExecuteMsg::Unstake
+		).unwrap();
+
+		// Sends the staked amount of tokens back to sender
+		assert!(
+			execute_response.messages.iter().any(|sub_msg| {
+				match &sub_msg.msg {
+					cosmwasm_std::CosmosMsg::Bank(sub_msg) => {
+						*sub_msg == cosmwasm_std::BankMsg::Send {
+							to_address: SHARES_HOLDER_ACCOUNT_2.into(),
+							amount: vec![coin(user2_stake_amount_total, &vote_shares_denom)]
+						}
+					}
+					_ => false
+				}
+			})
+		);
+		assert_eq!(
+			execute_response.events,
+			vec![
+				cosmwasm_std::Event::new("unstake")
+					.add_attribute("user", SHARES_HOLDER_ACCOUNT_2)
+					.add_attribute("user_total_votes", user2_stake_amount_total.to_string())
+			]
+		);
+		assert_eq!(
+			helpers::query_user_stats(
+				&mut env_deps,
+				SHARES_HOLDER_ACCOUNT_2
+			).unwrap(),
+			CourtUserStatsJsonable {
+				staked_votes: 0u128.into()
+			}
+		);
+		assert_eq!(
+			helpers::query_user_stats(
+				&mut env_deps,
+				SHARES_HOLDER_ACCOUNT_1
+			).unwrap(),
+			CourtUserStatsJsonable {
+				staked_votes: user1_stake_amount_total.into()
+			}
+		);
+
+		let execute_response = helpers::execute(
+			&mut env_deps,
+			Some(
+				MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }
+			),
+			CourtExecuteMsg::Unstake
+		).unwrap();
+
+		// Sends the staked amount of tokens back to sender
+		assert!(
+			execute_response.messages.iter().any(|sub_msg| {
+				match &sub_msg.msg {
+					cosmwasm_std::CosmosMsg::Bank(sub_msg) => {
+						*sub_msg == cosmwasm_std::BankMsg::Send {
+							to_address: SHARES_HOLDER_ACCOUNT_1.into(),
+							amount: vec![coin(user1_stake_amount_total, &vote_shares_denom)]
+						}
+					}
+					_ => false
+				}
+			})
+		);
+		assert_eq!(
+			execute_response.events,
+			vec![
+				cosmwasm_std::Event::new("unstake")
+					.add_attribute("user", SHARES_HOLDER_ACCOUNT_1)
+					.add_attribute("user_total_votes", user1_stake_amount_total.to_string())
+			]
+		);
+		assert_eq!(
+			helpers::query_user_stats(
+				&mut env_deps,
+				SHARES_HOLDER_ACCOUNT_1
+			).unwrap(),
+			CourtUserStatsJsonable {
+				staked_votes: 0u128.into()
+			}
+		);
+	}
+
+	#[test]
+	pub fn user_propose_transaction_unfunded_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 500000);
+		helpers::assert_unfunded_instruction(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 86400
+			}
+		);
+	}
+
+	#[test]
+	pub fn user_propose_transaction_non_empty_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 500000);
+		let execute_result = helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![],
+				expiry_time_seconds: 86400
+			}
+		);
+		assert!(
+			execute_result.is_err_and(|err| {
+				err.to_string().contains("Proposal must have at least one message")
+			})
+		);
+	}
+
+	#[test]
+	pub fn user_propose_transaction_expire_time_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		// Sanity tests for current config we're testing against
+		assert_eq!(helpers::query_config(&env_deps).unwrap().minimum_vote_proposal_percent, 10);
+		assert_eq!(helpers::query_config(&env_deps).unwrap().max_proposal_expiry_time_seconds, 7200);
+		assert_eq!(helpers::get_known_vote_supply(&env_deps), 1000000);
+
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 500000);
+		let execute_result = helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 7201
+			}
+		);
+		assert!(
+			execute_result.is_err_and(|err| {
+				err.to_string().contains("Proposal takes too long to expire")
+			})
+		);
+		helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 7200
+			}
+		).unwrap();
+
+	}
+
+	#[test]
+	pub fn user_propose_transaction_minimum_vote_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		// Sanity tests for current config we're testing against
+		assert_eq!(helpers::query_config(&env_deps).unwrap().minimum_vote_proposal_percent, 10);
+		assert_eq!(helpers::query_config(&env_deps).unwrap().max_proposal_expiry_time_seconds, 7200);
+		assert_eq!(helpers::get_known_vote_supply(&env_deps), 1000000);
+
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 99999);
+		let execute_result = helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 1200
+			}
+		);
+		assert!(
+			execute_result.is_err_and(|err| {
+				err.to_string().contains("User doesn't have enough staked votes to submit a proposal")
+			})
+		);
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 1);
+
+		helpers::execute_propose_transaction(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			vec![ProposedCourtMsgJsonable::SendCoin {
+				to: RANDOM_ACCOUNT_1.into(),
+				denom: "usei".into(),
+				amount: 1337u128.into()
+			}],
+			1200
+		);
+		
+		
+		assert_eq!(helpers::query_get_proposal(&env_deps, 0), Ok(Some(
+			CourtQueryResponseTransactionProposal {
+				proposal_id: 0,
+				status: TransactionProposalStatus::Pending,
+				info: TransactionProposalInfoJsonable {
+					proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+					votes_for: 100000u128.into(),
+					votes_against: 0u128.into(),
+					votes_abstain: 0u128.into(),
+					execution_status: TransactionProposalExecutionStatus::NotExecuted,
+					expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1200).millis()
+				},
+				messages: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}]
+			}
+		)));
+		assert_eq!(helpers::query_get_proposal_user_votes(&env_deps, 0, None, None, false), Ok(
+			vec![
+				CourtQueryResponseUserVote {
+					user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+					info: CourtUserVoteInfoJsonable { active_votes: 100000u128.into(), vote: CourtUserVoteStatus::Approve }
+				}
+			]
+		));
+		assert_eq!(helpers::query_get_proposals(&env_deps, None, None, false), Ok(
+			vec![
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 0,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1200).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_1.into(),
+						denom: "usei".into(),
+						amount: 1337u128.into()
+					}]
+				}
+			]
+		));
+		assert_eq!(helpers::query_proposal_amount(&env_deps), Ok(1));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_1, None, None, false), Ok(vec![0]));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_2, None, None, false), Ok(vec![]));
+		assert_eq!(helpers::query_get_users_with_active_proposals(&env_deps, None, None, false), Ok(vec![
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 0}]
+		));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_1, 0), Ok(CourtUserVoteInfoJsonable { active_votes: 100000u128.into(), vote: CourtUserVoteStatus::Approve }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_2, 0), Ok(CourtUserVoteInfoJsonable { active_votes: 0u128.into(), vote: CourtUserVoteStatus::Abstain }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_1, 1), Ok(CourtUserVoteInfoJsonable { active_votes: 0u128.into(), vote: CourtUserVoteStatus::Abstain }));
+
+	}
+
+	#[test]
+	pub fn user_propose_transaction_multiple() {
+		let mut env_deps = new_env_and_instantiate(None);
+		// Sanity tests for current config we're testing against
+		assert_eq!(helpers::query_config(&env_deps).unwrap().minimum_vote_proposal_percent, 10);
+		assert_eq!(helpers::query_config(&env_deps).unwrap().max_proposal_expiry_time_seconds, 7200);
+		assert_eq!(helpers::get_known_vote_supply(&env_deps), 1000000);
+
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 100000);
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_2, 150000);
+
+		helpers::execute_propose_transaction(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			vec![ProposedCourtMsgJsonable::SendCoin {
+				to: RANDOM_ACCOUNT_1.into(),
+				denom: "usei".into(),
+				amount: 1337u128.into()
+			}],
+			1200
+		);
+		helpers::execute_propose_transaction(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_1,
+			vec![ProposedCourtMsgJsonable::SendCoin {
+				to: RANDOM_ACCOUNT_3.into(),
+				denom: "usei".into(),
+				amount: 1338u128.into()
+			}],
+			1300
+		);
+		helpers::execute_propose_transaction(
+			&mut env_deps,
+			SHARES_HOLDER_ACCOUNT_2,
+			vec![ProposedCourtMsgJsonable::SendCoin {
+				to: RANDOM_ACCOUNT_2.into(),
+				denom: "usei".into(),
+				amount: 1339u128.into()
+			}],
+			1400
+		);
+
+		assert_eq!(helpers::query_get_proposal(&env_deps, 0), Ok(Some(
+			CourtQueryResponseTransactionProposal {
+				proposal_id: 0,
+				status: TransactionProposalStatus::Pending,
+				info: TransactionProposalInfoJsonable {
+					proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+					votes_for: 100000u128.into(),
+					votes_against: 0u128.into(),
+					votes_abstain: 0u128.into(),
+					execution_status: TransactionProposalExecutionStatus::NotExecuted,
+					expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1200).millis()
+				},
+				messages: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}]
+			}
+		)));
+		assert_eq!(helpers::query_get_proposal(&env_deps, 1), Ok(Some(
+			CourtQueryResponseTransactionProposal {
+				proposal_id: 1,
+				status: TransactionProposalStatus::Pending,
+				info: TransactionProposalInfoJsonable {
+					proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+					votes_for: 100000u128.into(),
+					votes_against: 0u128.into(),
+					votes_abstain: 0u128.into(),
+					execution_status: TransactionProposalExecutionStatus::NotExecuted,
+					expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1300).millis()
+				},
+				messages: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_3.into(),
+					denom: "usei".into(),
+					amount: 1338u128.into()
+				}]
+			}
+		)));
+		assert_eq!(helpers::query_get_proposal(&env_deps, 2), Ok(Some(
+			CourtQueryResponseTransactionProposal {
+				proposal_id: 2,
+				status: TransactionProposalStatus::Pending,
+				info: TransactionProposalInfoJsonable {
+					proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2),
+					votes_for: 150000u128.into(),
+					votes_against: 0u128.into(),
+					votes_abstain: 0u128.into(),
+					execution_status: TransactionProposalExecutionStatus::NotExecuted,
+					expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1400).millis()
+				},
+				messages: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_2.into(),
+					denom: "usei".into(),
+					amount: 1339u128.into()
+				}]
+			}
+		)));
+		assert_eq!(helpers::query_get_proposal_user_votes(&env_deps, 0, None, None, false), Ok(
+			vec![
+				CourtQueryResponseUserVote {
+					user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+					info: CourtUserVoteInfoJsonable { active_votes: 100000u128.into(), vote: CourtUserVoteStatus::Approve }
+				}
+			]
+		));
+		assert_eq!(helpers::query_get_proposal_user_votes(&env_deps, 1, None, None, false), Ok(
+			vec![
+				CourtQueryResponseUserVote {
+					user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+					info: CourtUserVoteInfoJsonable { active_votes: 100000u128.into(), vote: CourtUserVoteStatus::Approve }
+				}
+			]
+		));
+		assert_eq!(helpers::query_get_proposal_user_votes(&env_deps, 2, None, None, false), Ok(
+			vec![
+				CourtQueryResponseUserVote {
+					user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2),
+					info: CourtUserVoteInfoJsonable { active_votes: 150000u128.into(), vote: CourtUserVoteStatus::Approve }
+				}
+			]
+		));
+
+		assert_eq!(helpers::query_get_proposals(&env_deps, None, None, false), Ok(
+			vec![
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 0,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1200).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_1.into(),
+						denom: "usei".into(),
+						amount: 1337u128.into()
+					}]
+				},
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 1,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1300).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_3.into(),
+						denom: "usei".into(),
+						amount: 1338u128.into()
+					}]
+				},
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 2,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2),
+						votes_for: 150000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1400).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_2.into(),
+						denom: "usei".into(),
+						amount: 1339u128.into()
+					}]
+				}
+			]
+		));
+		assert_eq!(helpers::query_get_proposals(&env_deps, Some(1), Some(1), false), Ok(
+			vec![
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 1,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1300).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_3.into(),
+						denom: "usei".into(),
+						amount: 1338u128.into()
+					}]
+				}
+			]
+		));
+		assert_eq!(helpers::query_get_proposals(&env_deps, None, None, true), Ok(
+			vec![
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 2,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2),
+						votes_for: 150000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1400).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_2.into(),
+						denom: "usei".into(),
+						amount: 1339u128.into()
+					}]
+				},
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 1,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1300).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_3.into(),
+						denom: "usei".into(),
+						amount: 1338u128.into()
+					}]
+				},
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 0,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1200).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_1.into(),
+						denom: "usei".into(),
+						amount: 1337u128.into()
+					}]
+				},
+			]
+		));
+		assert_eq!(helpers::query_get_proposals(&env_deps, Some(2), None, true), Ok(
+			vec![
+				CourtQueryResponseTransactionProposal {
+					proposal_id: 0,
+					status: TransactionProposalStatus::Pending,
+					info: TransactionProposalInfoJsonable {
+						proposer: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1),
+						votes_for: 100000u128.into(),
+						votes_against: 0u128.into(),
+						votes_abstain: 0u128.into(),
+						execution_status: TransactionProposalExecutionStatus::NotExecuted,
+						expiry_timestamp_ms: env_deps.0.block.time.plus_seconds(1200).millis()
+					},
+					messages: vec![ProposedCourtMsgJsonable::SendCoin {
+						to: RANDOM_ACCOUNT_1.into(),
+						denom: "usei".into(),
+						amount: 1337u128.into()
+					}]
+				},
+			]
+		));
+		assert_eq!(helpers::query_proposal_amount(&env_deps), Ok(3));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_1, None, None, false), Ok(vec![0, 1]));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_2, None, None, false), Ok(vec![2]));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_1, None, Some(1), false), Ok(vec![0]));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_1, None, Some(1), true), Ok(vec![1]));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_1, Some(1), None, false), Ok(vec![1]));
+		assert_eq!(helpers::query_get_user_active_proposals(&env_deps, SHARES_HOLDER_ACCOUNT_1, Some(1), None, true), Ok(vec![0]));
+		assert_eq!(helpers::query_get_users_with_active_proposals(&env_deps, None, None, false), Ok(vec![
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 0},
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 1},
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), proposal_id: 2}
+		]));
+		assert_eq!(helpers::query_get_users_with_active_proposals(&env_deps, None, None, true), Ok(vec![
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), proposal_id: 2},
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 1},
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 0}
+		]));
+		assert_eq!(helpers::query_get_users_with_active_proposals(&env_deps, None, Some(1), false), Ok(vec![
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 0}
+		]));
+		assert_eq!(helpers::query_get_users_with_active_proposals(&env_deps, Some(CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 0}), None, false), Ok(vec![
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 1},
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), proposal_id: 2}
+		]));
+		assert_eq!(helpers::query_get_users_with_active_proposals(&env_deps, Some(CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_2), proposal_id: 2}), Some(1), true), Ok(vec![
+			CourtQueryUserWithActiveProposal {user: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), proposal_id: 1},
+		]));
+		
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_1, 0), Ok(CourtUserVoteInfoJsonable { active_votes: 100000u128.into(), vote: CourtUserVoteStatus::Approve }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_2, 0), Ok(CourtUserVoteInfoJsonable { active_votes: 0u128.into(), vote: CourtUserVoteStatus::Abstain }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_1, 1), Ok(CourtUserVoteInfoJsonable { active_votes: 100000u128.into(), vote: CourtUserVoteStatus::Approve }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_2, 1), Ok(CourtUserVoteInfoJsonable { active_votes: 0u128.into(), vote: CourtUserVoteStatus::Abstain }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_1, 2), Ok(CourtUserVoteInfoJsonable { active_votes: 0u128.into(), vote: CourtUserVoteStatus::Abstain }));
+		assert_eq!(helpers::query_user_vote_info(&env_deps, SHARES_HOLDER_ACCOUNT_2, 2), Ok(CourtUserVoteInfoJsonable { active_votes: 150000u128.into(), vote: CourtUserVoteStatus::Approve }));
+	}
+
+	#[test]
+	pub fn user_propose_transaction_token_recipiant_check() {
+		let mut env_deps = new_env_and_instantiate(None);
+		// Sanity tests for current config we're testing against
+		assert_eq!(helpers::query_config(&env_deps).unwrap().minimum_vote_proposal_percent, 10);
+		assert_eq!(helpers::query_config(&env_deps).unwrap().max_proposal_expiry_time_seconds, 7200);
+		assert_eq!(helpers::get_known_vote_supply(&env_deps), 1000000);
+
+		helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 100000);
+		let execute_result = helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_EVM_ACCOUNT_1.into(),
+					denom: "usei".into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 1200
+			}
+		);
+		assert!(
+			execute_result.is_err_and(|err| {
+				err.to_string().contains("an address beginning with \"sei1\" is required")
+			})
+		);
+
+		let execute_result = helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_ACCOUNT_1.into(),
+					denom: format!("erc20/{}", RANDOM_EVM_ACCOUNT_1).into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 1200
+			}
+		);
+		assert!(
+			execute_result.is_err_and(|err| {
+				err.to_string().contains("an address beginning with \"0x\" is required")
+			})
+		);
+		helpers::execute(
+			&mut env_deps,
+			Some(MessageInfo { sender: Addr::unchecked(SHARES_HOLDER_ACCOUNT_1), funds: vec![] }),
+			CourtExecuteMsg::ProposeTransaction {
+				msgs: vec![ProposedCourtMsgJsonable::SendCoin {
+					to: RANDOM_EVM_ACCOUNT_1.into(),
+					denom: format!("erc20/{}", RANDOM_EVM_ACCOUNT_1).into(),
+					amount: 1337u128.into()
+				}],
+				expiry_time_seconds: 1200
+			}
+		).unwrap();
+	}
+
 }

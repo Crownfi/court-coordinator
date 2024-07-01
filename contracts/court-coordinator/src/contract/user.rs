@@ -3,7 +3,7 @@ use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::Minim
 use cw_utils::{must_pay, nonpayable};
 use sei_cosmwasm::{SeiMsg, SeiQuerier, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, proposed_msg::{ProposedCourtMsg, ProposedCourtMsgJsonable}, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
+use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsgJsonable, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
 
 use super::shares::{votes_denom, votes_coin};
 
@@ -24,8 +24,8 @@ pub fn process_stake(
 			.add_event(
 				Event::new("stake")
 					.add_attribute("user", &msg_info.sender)
-					.add_attribute("new_amount", user_payment_amount)
-					.add_attribute("user_total", Uint128::from(user_stats.staked_votes))
+					.add_attribute("user_new_votes", user_payment_amount)
+					.add_attribute("user_total_votes", Uint128::from(user_stats.staked_votes))
 			)
 	)
 }
@@ -47,6 +47,9 @@ pub fn process_unstake(
 	let user_stats_map = get_user_stats_store();
 
 	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_sender)?;
+	if user_stats.staked_votes == 0 {
+		return Err(CourtContractError::NoStakedVotes);
+	}
 	let unstake_amount = user_stats.staked_votes;
 	user_stats.staked_votes = 0;
 
@@ -55,7 +58,7 @@ pub fn process_unstake(
 			.add_event(
 				Event::new("unstake")
 					.add_attribute("user", &msg_info.sender)
-					.add_attribute("unstake_amount", Uint128::from(unstake_amount))
+					.add_attribute("user_total_votes", Uint128::from(unstake_amount))
 			)
 			.add_message(
 				BankMsg::Send {
@@ -153,10 +156,13 @@ pub fn process_propose_transaction(
 	let proposer_addr = msg_info.sender;
 
 	let app_config = CourtAppConfig::load_non_empty()?;
+	let app_config = app_config.as_ref(); // Helps with debugging (maybe with perf?)
+
 	let token_supply = total_supply_workaround(&votes_denom(&env_info.env));
 	let user_stats = get_user_stats_store()
 		.get(&proposer)?
 		.unwrap_or_default();
+	let user_stats = user_stats.as_ref(); // Helps with debugging (maybe with perf?)
 
 	if msgs.len() == 0 {
 		return Err(CourtContractError::EmptyProposal);
@@ -167,13 +173,12 @@ pub fn process_propose_transaction(
 	if !app_config.allow_new_proposals() {
 		return Err(CourtContractError::NewProposalsNotAllowed);
 	}
-	if
-		u8::try_from(
-			user_stats.staked_votes
-				.checked_mul(100u128.into()).unwrap()
-				.checked_div(token_supply.into()).unwrap()
-		).unwrap() < app_config.minimum_vote_proposal_percent {
-	} else {
+	let proposer_vote_percent = u8::try_from(
+		user_stats.staked_votes
+			.checked_mul(100u128.into()).unwrap()
+			.checked_div(token_supply.into()).unwrap()
+		).unwrap();
+	if proposer_vote_percent < app_config.minimum_vote_proposal_percent {
 		return Err(CourtContractError::InsufficientVotesForProposal);
 	}
 	let msgs = msgs.into_iter().enumerate().map(|(index, mut proposal)| {
