@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-pub fn user_unstake_votes_unfunded_check() {
+pub fn unfunded_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 
 	helpers::assert_unfunded_instruction(
@@ -15,7 +15,7 @@ pub fn user_unstake_votes_unfunded_check() {
 }
 
 #[test]
-pub fn user_unstake_votes_must_have_staked_check() {
+pub fn must_have_staked_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 	assert!(helpers::execute(
 		&mut env_deps,
@@ -29,7 +29,7 @@ pub fn user_unstake_votes_must_have_staked_check() {
 }
 
 #[test]
-pub fn user_unstake_votes_only_when_not_in_pending_proposals() {
+pub fn only_when_not_in_pending_proposals() {
 	let mut env_deps = new_env_and_instantiate(None);
 	// Sanity tests for current config we're testing against
 	assert_eq!(
@@ -67,7 +67,7 @@ pub fn user_unstake_votes_only_when_not_in_pending_proposals() {
 }
 
 #[test]
-pub fn user_unstake_votes_tokens_actually_returned() {
+pub fn tokens_actually_returned() {
 	let mut env_deps = new_env_and_instantiate(None);
 	let vote_shares_denom = helpers::query_denom(&env_deps).unwrap().votes;
 	let user1_stake_amount_1 = 2147u128;
