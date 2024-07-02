@@ -1,5 +1,5 @@
-use crownfi_cw_common::impl_from_cosmwasm_std_error_common;
 use cosmwasm_std::StdError;
+use crownfi_cw_common::impl_from_cosmwasm_std_error_common;
 use cw_utils::PaymentError;
 use thiserror::Error;
 
@@ -24,7 +24,7 @@ pub enum CourtContractError {
 	#[error("Proposal status should be \"{expected}\" for this operation but it is currently \"{actual}\"")]
 	UnexpectedProposalStatus {
 		expected: TransactionProposalStatus,
-		actual: TransactionProposalStatus
+		actual: TransactionProposalStatus,
 	},
 	#[error("Proposal must have at least one message")]
 	EmptyProposal,
@@ -39,14 +39,8 @@ pub enum CourtContractError {
 	#[error("Doing this may result in this contract becoming unusable")]
 	WouldLockupContract,
 	#[error("Invalid address \"{wrong_addr}\", an address beginning with \"0x\" is required for {proprety_name}")]
-	EvmAddressRequired {
-		wrong_addr: String,
-		proprety_name: String
-	},
+	EvmAddressRequired { wrong_addr: String, proprety_name: String },
 	#[error("Invalid address \"{wrong_addr}\", an address beginning with \"sei1\" is required for {proprety_name}")]
-	SeiAddressRequired {
-		wrong_addr: String,
-		proprety_name: String
-	}
+	SeiAddressRequired { wrong_addr: String, proprety_name: String },
 }
 impl_from_cosmwasm_std_error_common!(CourtContractError);

@@ -1,16 +1,29 @@
-use cosmwasm_std::{MessageInfo, Response, Event, Uint128, BankMsg, StdError};
-use crownfi_cw_common::{data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions};
+use super::shares::{votes_coin, votes_denom};
+use crate::{
+	error::CourtContractError,
+	proposed_msg::ProposedCourtMsgJsonable,
+	state::{
+		app::{
+			get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig,
+			TransactionProposalInfo, TransactionProposalStatus,
+		},
+		user::{
+			get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set,
+			get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus,
+		},
+	},
+	workarounds::total_supply_workaround,
+};
+use cosmwasm_std::{BankMsg, Event, MessageInfo, Response, StdError, Uint128};
+use crownfi_cw_common::{
+	data_types::canonical_addr::SeiCanonicalAddr, env::MinimalEnvInfo, extentions::timestamp::TimestampExtentions,
+};
 use cw_utils::{must_pay, nonpayable};
 use sei_cosmwasm::{SeiMsg, SeiQuerier, SeiQueryWrapper};
 
-use crate::{error::CourtContractError, proposed_msg::ProposedCourtMsgJsonable, state::{app::{get_transaction_proposal_info_vec, get_transaction_proposal_messages_vec, CourtAppConfig, TransactionProposalInfo, TransactionProposalStatus}, user::{get_all_user_active_proposal_ids, get_proposal_user_vote_store, get_user_active_proposal_id_set, get_user_stats_store, CourtUserVoteInfoJsonable, CourtUserVoteStatus}}, workarounds::total_supply_workaround};
-
-use super::shares::{votes_denom, votes_coin};
-
-
 pub fn process_stake(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
-	msg_info: MessageInfo
+	msg_info: MessageInfo,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
 	let user_payment_amount = must_pay(&msg_info, &votes_denom(&env_info.env))?;
@@ -19,27 +32,22 @@ pub fn process_stake(
 	let mut user_stats = user_stats_map.get_or_default_autosaving(&msg_sender)?;
 	user_stats.staked_votes = user_stats.staked_votes.checked_add(user_payment_amount.into()).unwrap();
 
-	Ok(
-		Response::new()
-			.add_event(
-				Event::new("stake")
-					.add_attribute("user", &msg_info.sender)
-					.add_attribute("user_new_votes", user_payment_amount)
-					.add_attribute("user_total_votes", Uint128::from(user_stats.staked_votes))
-			)
-	)
+	Ok(Response::new().add_event(
+		Event::new("stake")
+			.add_attribute("user", &msg_info.sender)
+			.add_attribute("user_new_votes", user_payment_amount)
+			.add_attribute("user_total_votes", Uint128::from(user_stats.staked_votes)),
+	))
 }
 
 pub fn process_unstake(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
-	msg_info: MessageInfo
+	msg_info: MessageInfo,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	nonpayable(&msg_info)?;
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
-	let has_active_votes = get_all_user_active_proposal_ids(
-		msg_sender
-	)?.next().is_some();
-	
+	let has_active_votes = get_all_user_active_proposal_ids(msg_sender)?.next().is_some();
+
 	if has_active_votes {
 		return Err(CourtContractError::VotesActive);
 	}
@@ -53,68 +61,59 @@ pub fn process_unstake(
 	let unstake_amount = user_stats.staked_votes;
 	user_stats.staked_votes = 0;
 
-	Ok(
-		Response::new()
-			.add_event(
-				Event::new("unstake")
-					.add_attribute("user", &msg_info.sender)
-					.add_attribute("user_total_votes", Uint128::from(unstake_amount))
-			)
-			.add_message(
-				BankMsg::Send {
-					to_address: msg_info.sender.to_string(),
-					amount: vec![votes_coin(&env_info.env, unstake_amount)]
-				}
-			)
-	)
+	Ok(Response::new()
+		.add_event(
+			Event::new("unstake")
+				.add_attribute("user", &msg_info.sender)
+				.add_attribute("user_total_votes", Uint128::from(unstake_amount)),
+		)
+		.add_message(BankMsg::Send {
+			to_address: msg_info.sender.to_string(),
+			amount: vec![votes_coin(&env_info.env, unstake_amount)],
+		}))
 }
 
 pub fn process_vote(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
 	msg_info: MessageInfo,
 	proposal_id: u32,
-	approve: CourtUserVoteStatus
+	approve: CourtUserVoteStatus,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	nonpayable(&msg_info)?;
 	let msg_sender = SeiCanonicalAddr::try_from(&msg_info.sender)?;
 	let app_config = CourtAppConfig::load_non_empty()?;
 	let token_supply = total_supply_workaround(&votes_denom(&env_info.env));
-	let user_stats = get_user_stats_store()
-		.get(&msg_sender)?
-		.unwrap_or_default();
+	let user_stats = get_user_stats_store().get(&msg_sender)?.unwrap_or_default();
 
 	let proposals = get_transaction_proposal_info_vec();
-	let mut proposal = proposals.get(proposal_id)?.ok_or(
-		StdError::not_found(format!("Proposal {} does not exist", proposal_id))
-	)?;
-	proposal.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config)
+	let mut proposal = proposals
+		.get(proposal_id)?
+		.ok_or(StdError::not_found(format!("Proposal {} does not exist", proposal_id)))?;
+	proposal
+		.status(env_info.env.block.time.millis(), token_supply.u128(), &app_config)
 		.enforce_status(TransactionProposalStatus::Pending)?;
 
 	let user_active_proposals = get_user_active_proposal_id_set();
-	let mut user_vote_info = get_proposal_user_vote_store()
-		.get_or_default_autosaving(&(proposal_id, msg_sender))?;
-	
+	let mut user_vote_info = get_proposal_user_vote_store().get_or_default_autosaving(&(proposal_id, msg_sender))?;
+
 	if user_stats.staked_votes == 0 {
 		return Err(CourtContractError::NoStakedVotes);
 	}
 	if user_vote_info.active_votes != 0 {
-		if
-			user_vote_info.active_votes == user_stats.staked_votes &&
-			user_vote_info.vote() == approve
-		{
+		if user_vote_info.active_votes == user_stats.staked_votes && user_vote_info.vote() == approve {
 			return Err(CourtContractError::AlreadyVoted);
 		}
 		// User is either adding votes or chainging their vote, so we gotta take away the old votes first
 		match user_vote_info.vote() {
 			CourtUserVoteStatus::Oppose => {
 				proposal.votes_against = proposal.votes_against.checked_sub(user_vote_info.active_votes).unwrap();
-			},
+			}
 			CourtUserVoteStatus::Approve => {
-				proposal.votes_for = proposal.votes_for.checked_sub(user_vote_info.active_votes).unwrap();	
-			},
+				proposal.votes_for = proposal.votes_for.checked_sub(user_vote_info.active_votes).unwrap();
+			}
 			CourtUserVoteStatus::Abstain => {
-				proposal.votes_abstain = proposal.votes_against.checked_sub(user_vote_info.active_votes).unwrap();	
-			},
+				proposal.votes_abstain = proposal.votes_against.checked_sub(user_vote_info.active_votes).unwrap();
+			}
 		}
 	}
 	user_vote_info.active_votes = user_stats.staked_votes;
@@ -122,34 +121,30 @@ pub fn process_vote(
 	match approve {
 		CourtUserVoteStatus::Oppose => {
 			proposal.votes_against = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();
-		},
+		}
 		CourtUserVoteStatus::Approve => {
-			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes).unwrap();	
-		},
+			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes).unwrap();
+		}
 		CourtUserVoteStatus::Abstain => {
-			proposal.votes_abstain = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();	
-		},
+			proposal.votes_abstain = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();
+		}
 	}
 	user_active_proposals.add(&(msg_sender, proposal_id))?;
 	proposals.set(proposal_id, &proposal)?;
-	Ok(
-		Response::new()
-			.add_event(
-				Event::new("vote")
-					.add_attribute("proposal_id", proposal_id.to_string())
-					.add_attribute("voter", msg_info.sender)
-					.add_attribute("votes", Uint128::from(user_stats.staked_votes))
-					.add_attribute("vote", approve.to_string())
-			)
-	)
+	Ok(Response::new().add_event(
+		Event::new("vote")
+			.add_attribute("proposal_id", proposal_id.to_string())
+			.add_attribute("voter", msg_info.sender)
+			.add_attribute("votes", Uint128::from(user_stats.staked_votes))
+			.add_attribute("vote", approve.to_string()),
+	))
 }
-
 
 pub fn process_propose_transaction(
 	env_info: MinimalEnvInfo<SeiQueryWrapper>,
 	msg_info: MessageInfo,
 	msgs: Vec<ProposedCourtMsgJsonable>,
-	expiry_time_seconds: u32
+	expiry_time_seconds: u32,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	nonpayable(&msg_info)?;
 	let proposer = SeiCanonicalAddr::try_from(&msg_info.sender)?;
@@ -159,9 +154,7 @@ pub fn process_propose_transaction(
 	let app_config = app_config.as_ref(); // Helps with debugging (maybe with perf?)
 
 	let token_supply = total_supply_workaround(&votes_denom(&env_info.env));
-	let user_stats = get_user_stats_store()
-		.get(&proposer)?
-		.unwrap_or_default();
+	let user_stats = get_user_stats_store().get(&proposer)?.unwrap_or_default();
 	let user_stats = user_stats.as_ref(); // Helps with debugging (maybe with perf?)
 
 	if msgs.len() == 0 {
@@ -174,62 +167,66 @@ pub fn process_propose_transaction(
 		return Err(CourtContractError::NewProposalsNotAllowed);
 	}
 	let proposer_vote_percent = u8::try_from(
-		user_stats.staked_votes
-			.checked_mul(100u128.into()).unwrap()
-			.checked_div(token_supply.into()).unwrap()
-		).unwrap();
+		user_stats
+			.staked_votes
+			.checked_mul(100u128.into())
+			.unwrap()
+			.checked_div(token_supply.into())
+			.unwrap(),
+	)
+	.unwrap();
 	if proposer_vote_percent < app_config.minimum_vote_proposal_percent {
 		return Err(CourtContractError::InsufficientVotesForProposal);
 	}
-	let msgs = msgs.into_iter().enumerate().map(|(index, mut proposal)| {
-		match &mut proposal {
-			ProposedCourtMsgJsonable::SendCoin { to, denom, amount: _ } => {
-				if denom.is_erc20() {
-					if !to.starts_with("0x") {
-						*to = SeiQuerier::new(&env_info.querier).get_evm_address(to.clone())
-							.ok()
-							.filter(|response_addr| {
-								response_addr.evm_address.len() > 0 && response_addr.associated
-							})
-							.map(|response| {
-								response.evm_address
-							})
-							.ok_or(
-								CourtContractError::EvmAddressRequired {
+	let msgs = msgs
+		.into_iter()
+		.enumerate()
+		.map(|(index, mut proposal)| {
+			match &mut proposal {
+				ProposedCourtMsgJsonable::SendCoin { to, denom, amount: _ } => {
+					if denom.is_erc20() {
+						if !to.starts_with("0x") {
+							*to = SeiQuerier::new(&env_info.querier)
+								.get_evm_address(to.clone())
+								.ok()
+								.filter(|response_addr| response_addr.evm_address.len() > 0 && response_addr.associated)
+								.map(|response| response.evm_address)
+								.ok_or(CourtContractError::EvmAddressRequired {
 									wrong_addr: to.clone(),
-									proprety_name: format!("propose_transaction.msgs[{index}].to")
-								}
-							)?;
-					}
-				} else {
-					if to.starts_with("0x") {
-						*to = SeiQuerier::new(&env_info.querier).get_sei_address(to.clone())
-							.ok()
-							.filter(|response_addr| {
-								response_addr.sei_address.len() > 0 && response_addr.associated
-							})
-							.map(|response| {
-								response.sei_address
-							}).ok_or(
-								CourtContractError::SeiAddressRequired {
+									proprety_name: format!("propose_transaction.msgs[{index}].to"),
+								})?;
+						}
+					} else {
+						if to.starts_with("0x") {
+							*to = SeiQuerier::new(&env_info.querier)
+								.get_sei_address(to.clone())
+								.ok()
+								.filter(|response_addr| response_addr.sei_address.len() > 0 && response_addr.associated)
+								.map(|response| response.sei_address)
+								.ok_or(CourtContractError::SeiAddressRequired {
 									wrong_addr: to.clone(),
-									proprety_name: format!("propose_transaction.msgs[{index}].to")
-								}
-							)?;
+									proprety_name: format!("propose_transaction.msgs[{index}].to"),
+								})?;
+						}
 					}
 				}
+				_ => {}
 			}
-			_ => {}
-		}
-		Ok(proposal.try_into()?)
-	}).collect::<Result<_, CourtContractError>>()?;
+			Ok(proposal.try_into()?)
+		})
+		.collect::<Result<_, CourtContractError>>()?;
 
 	let mut proposal_infos = get_transaction_proposal_info_vec();
 	let mut proposal_msgs = get_transaction_proposal_messages_vec();
 	let new_proposal = TransactionProposalInfo::new(
 		proposer.clone(),
 		user_stats.staked_votes,
-		env_info.env.block.time.plus_seconds(expiry_time_seconds as u64).millis()
+		env_info
+			.env
+			.block
+			.time
+			.plus_seconds(expiry_time_seconds as u64)
+			.millis(),
 	);
 	let new_proposal_id = proposal_infos.len();
 	proposal_infos.push(&new_proposal)?;
@@ -240,23 +237,22 @@ pub fn process_propose_transaction(
 		&(new_proposal_id, proposer),
 		&(&CourtUserVoteInfoJsonable {
 			active_votes: user_stats.staked_votes.into(),
-			vote: CourtUserVoteStatus::Approve
-		}).try_into()?
+			vote: CourtUserVoteStatus::Approve,
+		})
+			.try_into()?,
 	)?;
 	get_user_active_proposal_id_set().add(&(proposer, new_proposal_id))?;
-	Ok(
-		Response::new()
-			.add_event(
-				Event::new("proposal")
-					.add_attribute("proposal_id", new_proposal_id.to_string())
-					.add_attribute("proposer", proposer_addr.clone())
-			)
-			.add_event(
-				Event::new("vote")
-					.add_attribute("proposal_id", new_proposal_id.to_string())
-					.add_attribute("voter", proposer_addr)
-					.add_attribute("votes", Uint128::from(user_stats.staked_votes))
-					.add_attribute("vote", "approve")
-			)
-	)
+	Ok(Response::new()
+		.add_event(
+			Event::new("proposal")
+				.add_attribute("proposal_id", new_proposal_id.to_string())
+				.add_attribute("proposer", proposer_addr.clone()),
+		)
+		.add_event(
+			Event::new("vote")
+				.add_attribute("proposal_id", new_proposal_id.to_string())
+				.add_attribute("voter", proposer_addr)
+				.add_attribute("votes", Uint128::from(user_stats.staked_votes))
+				.add_attribute("vote", "approve"),
+		))
 }
