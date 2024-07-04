@@ -112,7 +112,7 @@ pub fn process_vote(
 				proposal.votes_for = proposal.votes_for.checked_sub(user_vote_info.active_votes).unwrap();
 			}
 			CourtUserVoteStatus::Abstain => {
-				proposal.votes_abstain = proposal.votes_against.checked_sub(user_vote_info.active_votes).unwrap();
+				proposal.votes_abstain = proposal.votes_abstain.checked_sub(user_vote_info.active_votes).unwrap();
 			}
 		}
 	}
@@ -126,7 +126,7 @@ pub fn process_vote(
 			proposal.votes_for = proposal.votes_for.checked_add(user_stats.staked_votes).unwrap();
 		}
 		CourtUserVoteStatus::Abstain => {
-			proposal.votes_abstain = proposal.votes_against.checked_add(user_stats.staked_votes).unwrap();
+			proposal.votes_abstain = proposal.votes_abstain.checked_add(user_stats.staked_votes).unwrap();
 		}
 	}
 	user_active_proposals.add(&(msg_sender, proposal_id))?;

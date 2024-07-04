@@ -21,6 +21,9 @@ mod helpers;
 mod user_propose_transaction;
 mod user_stake_votes;
 mod user_unstake_votes;
+mod user_vote;
+mod deactivate_votes;
+mod execute_proposal;
 
 #[test]
 pub fn instantiate() {

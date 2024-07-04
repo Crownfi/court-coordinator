@@ -22,7 +22,7 @@ export type Addr = string;
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "TransactionProposalExecutionStatus".
  */
-export type TransactionProposalExecutionStatus = "not_executed" | "executed" | "cancelled";
+export type TransactionProposalExecutionStatus = "not_executed" | "executed";
 /**
  * A thin wrapper around u128 that is using strings for JSON encoding/decoding, such that the full u128 range can be used for clients that convert JSON numbers to floats, like JavaScript and jq.
  *
@@ -49,7 +49,15 @@ export type ProposedCourtMsgJsonable =
       send_coin: {
         amount: Uint128;
         denom: FungibleAssetKindString;
-        to: Addr;
+        to: string;
+        [k: string]: unknown;
+      };
+    }
+  | {
+      execute_evm_contract: {
+        contract: string;
+        msg: Binary;
+        value: Uint128;
         [k: string]: unknown;
       };
     }
@@ -105,7 +113,7 @@ export type Binary = string;
 /**
  * Transaction proposal status, this is derived from the actual proposal struct rather than as a property.
  *
- * The way this is derived is documented below. ``` let proposal_status = if transaction_executed_status == TransactionExecutionStatus::Executed { TransactionProposalStatus::Executed } else if transaction_executed_status == TransactionExecutionStatus::Expired { TransactionProposalStatus::ExecutionExpired } else if expiry < last_config_change_time { TransactionProposalStatus::Rejected } else if current_time < expiry { if ((votes_for + votes_against) * 100 / token_supply) >= minimum_vote_turnout_percent || (votes_for * 100 / token_supply) >= minimum_vote_pass_percent { TransactionProposalStatus::Passed } else { TransactionProposalStatus::Pending } } else if current_time >= expiry && ( ((votes_for + votes_against) * 100 / token_supply) < minimum_vote_turnout_percent || (votes_for * 100 / (votes_for + votes_against)) < minimum_vote_pass_percent ) { TransactionProposalStatus::Rejected } else { TransactionProposalStatus::Passed } ```
+ * The way this is derived is documented below. ```rust,ignore let proposal_status = if transaction_executed_status == TransactionExecutionStatus::Executed { TransactionProposalStatus::Executed } else if transaction_executed_status == TransactionExecutionStatus::Expired { TransactionProposalStatus::ExecutionExpired } else if expiry < last_config_change_time { TransactionProposalStatus::Rejected } else if current_time < expiry { if ((votes_for + votes_against) * 100 / token_supply) >= minimum_vote_turnout_percent || (votes_for * 100 / token_supply) >= minimum_vote_pass_percent { TransactionProposalStatus::Passed } else { TransactionProposalStatus::Pending } } else if current_time >= expiry && ( ((votes_for + votes_against) * 100 / token_supply) < minimum_vote_turnout_percent || (votes_for * 100 / (votes_for + votes_against)) < minimum_vote_pass_percent ) { TransactionProposalStatus::Rejected } else { TransactionProposalStatus::Passed } ```
  *
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "TransactionProposalStatus".
@@ -116,7 +124,7 @@ export type TransactionProposalStatus =
   | "passed"
   | "executed"
   | "execution_expired"
-  | "cancelled";
+  | "rejected_or_expired";
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "Array_of_CourtQueryResponseTransactionProposal".
@@ -124,9 +132,24 @@ export type TransactionProposalStatus =
 export type ArrayOf_CourtQueryResponseTransactionProposal = CourtQueryResponseTransactionProposal[];
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
+ * via the `definition` "CourtUserVoteStatus".
+ */
+export type CourtUserVoteStatus = "Abstain" | "Approve" | "Oppose";
+/**
+ * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "Array_of_CourtQueryResponseUserVote".
  */
 export type ArrayOf_CourtQueryResponseUserVote = CourtQueryResponseUserVote[];
+/**
+ * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
+ * via the `definition` "Array_of_CourtQueryUserWithActiveProposal".
+ */
+export type ArrayOf_CourtQueryUserWithActiveProposal = CourtQueryUserWithActiveProposal[];
+/**
+ * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
+ * via the `definition` "Array_of_uint32".
+ */
+export type ArrayOfUint32 = number[];
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "CourtAdminExecuteMsg".
@@ -134,12 +157,16 @@ export type ArrayOf_CourtQueryResponseUserVote = CourtQueryResponseUserVote[];
 export type CourtAdminExecuteMsg =
   | {
       change_config: {
-        admin?: Addr | null;
         execution_expiry_time_seconds?: number | null;
         max_proposal_expiry_time_seconds?: number | null;
         minimum_vote_pass_percent?: number | null;
         minimum_vote_proposal_percent?: number | null;
         minimum_vote_turnout_percent?: number | null;
+      };
+    }
+  | {
+      change_admin: {
+        admin: Addr;
       };
     }
   | {
@@ -164,8 +191,8 @@ export type CourtExecuteMsg =
     }
   | {
       vote: {
-        approval: boolean;
         id: number;
+        vote: CourtUserVoteStatus;
       };
     }
   | {
@@ -190,7 +217,8 @@ export type CourtExecuteMsg =
  * via the `definition` "CourtQueryMsg".
  */
 export type CourtQueryMsg =
-  | ("config" | "denom" | "proposal_amount")
+  | ("denom" | "proposal_amount")
+  | "config"
   | {
       get_proposal: {
         id: number;
@@ -199,8 +227,8 @@ export type CourtQueryMsg =
   | {
       get_proposals: {
         descending: boolean;
-        limit: number;
-        skip: number;
+        limit?: number | null;
+        skip?: number | null;
       };
     }
   | {
@@ -215,11 +243,26 @@ export type CourtQueryMsg =
       };
     }
   | {
-      get_user_votes: {
+      get_users_with_active_proposals: {
+        after?: CourtQueryUserWithActiveProposal | null;
         descending: boolean;
-        limit: number;
-        skip: number;
+        limit?: number | null;
+      };
+    }
+  | {
+      get_user_active_proposals: {
+        descending: boolean;
+        limit?: number | null;
+        skip?: number | null;
         user: Addr;
+      };
+    }
+  | {
+      get_proposal_user_votes: {
+        after?: Addr | null;
+        descending: boolean;
+        limit?: number | null;
+        proposal_id: number;
       };
     };
 /**
@@ -255,6 +298,7 @@ export interface TransactionProposalInfoJsonable {
   execution_status: TransactionProposalExecutionStatus;
   expiry_timestamp_ms: number;
   proposer: Addr;
+  votes_abstain: Uint128;
   votes_against: Uint128;
   votes_for: Uint128;
   [k: string]: unknown;
@@ -274,7 +318,7 @@ export interface Coin {
  */
 export interface CourtQueryResponseUserVote {
   info: CourtUserVoteInfoJsonable;
-  proposal_id: number;
+  user: Addr;
   [k: string]: unknown;
 }
 /**
@@ -283,7 +327,16 @@ export interface CourtQueryResponseUserVote {
  */
 export interface CourtUserVoteInfoJsonable {
   active_votes: Uint128;
-  voted_for: boolean;
+  vote: CourtUserVoteStatus;
+  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
+ * via the `definition` "CourtQueryUserWithActiveProposal".
+ */
+export interface CourtQueryUserWithActiveProposal {
+  proposal_id: number;
+  user: Addr;
   [k: string]: unknown;
 }
 /**
@@ -314,6 +367,9 @@ export interface CourtInstantiateMsg {
   minimum_vote_turnout_percent: number;
   shares_mint_amount: Uint128;
   shares_mint_receiver: Addr;
+  vote_share_description: string;
+  vote_share_name: string;
+  vote_share_symbol: string;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema

@@ -1,7 +1,7 @@
 use super::*;
 
 #[test]
-pub fn user_propose_transaction_unfunded_check() {
+pub fn unfunded_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 	helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 500000);
 	helpers::assert_unfunded_instruction(
@@ -22,7 +22,7 @@ pub fn user_propose_transaction_unfunded_check() {
 }
 
 #[test]
-pub fn user_propose_transaction_non_empty_check() {
+pub fn non_empty_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 	helpers::execute_stake_votes(&mut env_deps, SHARES_HOLDER_ACCOUNT_1, 500000);
 	let execute_result = helpers::execute(
@@ -40,7 +40,7 @@ pub fn user_propose_transaction_non_empty_check() {
 }
 
 #[test]
-pub fn user_propose_transaction_expire_time_check() {
+pub fn expire_time_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 	// Sanity tests for current config we're testing against
 	assert_eq!(
@@ -91,7 +91,7 @@ pub fn user_propose_transaction_expire_time_check() {
 }
 
 #[test]
-pub fn user_propose_transaction_minimum_vote_check() {
+pub fn minimum_vote_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 	// Sanity tests for current config we're testing against
 	assert_eq!(
@@ -229,7 +229,7 @@ pub fn user_propose_transaction_minimum_vote_check() {
 }
 
 #[test]
-pub fn user_propose_transaction_multiple() {
+pub fn multiple() {
 	let mut env_deps = new_env_and_instantiate(None);
 	// Sanity tests for current config we're testing against
 	assert_eq!(
@@ -669,7 +669,7 @@ pub fn user_propose_transaction_multiple() {
 }
 
 #[test]
-pub fn user_propose_transaction_token_recipiant_check() {
+pub fn token_recipiant_check() {
 	let mut env_deps = new_env_and_instantiate(None);
 	// Sanity tests for current config we're testing against
 	assert_eq!(
