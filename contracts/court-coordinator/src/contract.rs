@@ -364,7 +364,6 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 				iter.take(limit.unwrap_or(u32::MAX) as usize)
 					.collect::<StdResult<Vec<CourtQueryResponseUserVote>>>()?
 			})?
-		},
-		_ => todo!()
+		}
 	})
 }

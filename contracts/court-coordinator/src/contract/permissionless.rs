@@ -86,7 +86,8 @@ pub fn process_execute_proposal(
 				.map(|p_msg| {
 					match p_msg {
 						ProposedCourtMsg::TokenfactoryMint { tokens } if tokens.denom == votes_denom => {
-							if total_supply_workaround(&votes_denom).u128()
+							if total_supply_workaround(&votes_denom)
+								.u128()
 								.saturating_add(tokens.amount)
 								.saturating_mul(10000)
 								.eq(&u128::MAX)

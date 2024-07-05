@@ -257,6 +257,13 @@ impl TransactionProposalInfo {
 		token_supply: u128,
 		app_config: &CourtAppConfig,
 	) -> TransactionProposalStatus {
+		// OVERFLOW SAFETY:
+		// The Mint function doesn't allow a total supply greater than 34028236692093846346337460743176821.
+		// Therefore multiplying by up to 10000 will not overflow. (If we want to use bps some day)
+		// Proposals cannot be created by the contract unless the token supply is non-zero.
+		// By definition, the total votes cannot exceed the total number existing votes.
+		let total_turnout_percent =
+			u8::try_from((self.votes_for + self.votes_against + self.votes_abstain) * 100 / token_supply).unwrap();
 		if let Some(status) = self.execution_status().as_proposal_status() {
 			status
 		} else if self.expiry_timestamp_ms < app_config.last_config_change_timestamp_ms {
@@ -264,28 +271,22 @@ impl TransactionProposalInfo {
 			TransactionProposalStatus::RejectedOrExpired
 		} else if current_timestamp_ms < self.expiry_timestamp_ms {
 			let total_vote_for_percent_of_supply = u8::try_from(self.votes_for * 100 / token_supply).unwrap();
-			let total_turnout_percent =
-				u8::try_from((self.votes_for + self.votes_against) * 100 / token_supply).unwrap();
 			if total_vote_for_percent_of_supply >= app_config.minimum_vote_pass_percent
 				&& total_turnout_percent >= app_config.minimum_vote_turnout_percent
 			{
-				// At this point, this proposal can't be rejected, (unless new votes are minted) so we might as well
-				// allow the transaction to be executed early to save everyone time.
+				// At this point, this proposal can't be rejected, (unless new votes are minted or people change their
+				// votes) so we might as well allow the transaction to be executed early to save everyone time.
 				TransactionProposalStatus::Passed
 			} else {
 				TransactionProposalStatus::Pending
 			}
-		} else if u8::try_from(
-			// OVERFLOW SAFETY:
-			// The Mint function doesn't allow a total supply greater than 34028236692093846346337460743176821.
-			// Therefore multiplying by up to 10000 will not overflow. (If we want to use bps some day)
-			// Proposals cannot be created by the contract unless the token supply is non-zero.
-			// By definition, the total votes for and against cannot exceed the total number existing votes.
-			(self.votes_for + self.votes_against) * 100 / token_supply,
-		)
-		.unwrap() < app_config.minimum_vote_turnout_percent
-			|| u8::try_from(self.votes_for * 100 / (self.votes_for + self.votes_against)).unwrap()
-				< app_config.minimum_vote_pass_percent
+		} else if total_turnout_percent < app_config.minimum_vote_turnout_percent
+			|| u8::try_from(
+				(self.votes_for * 100)
+					.checked_div(self.votes_for + self.votes_against)
+					.unwrap_or_default(),
+			)
+			.unwrap() < app_config.minimum_vote_pass_percent
 		{
 			TransactionProposalStatus::Rejected
 		} else if current_timestamp_ms

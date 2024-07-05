@@ -336,17 +336,6 @@ pub fn assert_must_pay(env_deps: &mut (Env, SeiMockEnvDeps), sender: &str, msg: 
 	assert!(execute_response.is_ok());
 }
 
-// Sei's cosmwasm is too outdated for contracts to know the total supply of a token. So... workaround!
-pub fn set_known_vote_supply(env_deps: &mut (Env, SeiMockEnvDeps), amount: u128) {
-	use cosmwasm_std::Storage;
-
-	let vote_shares_denom = format!("factory/{}/votes", &env_deps.0.contract.address);
-	env_deps
-		.1
-		.storage
-		.set(vote_shares_denom.as_bytes(), &amount.to_le_bytes());
-}
-
 // Contract stores the number of tokens it minted here
 pub fn get_known_vote_supply(env_deps: &(Env, SeiMockEnvDeps)) -> u128 {
 	use cosmwasm_std::Storage;
@@ -407,15 +396,16 @@ pub fn execute_stake_votes(env_deps: &mut (Env, SeiMockEnvDeps), sender: &str, a
 	assert_eq!(amount, stake_amount_increase);
 }
 
-pub fn execute_deactivate_votes(
-	env_deps: &mut (Env, SeiMockEnvDeps),
-	voter: &str
-) {
+pub fn execute_deactivate_votes(env_deps: &mut (Env, SeiMockEnvDeps), voter: &str) {
 	execute(
 		env_deps,
 		None,
-		CourtExecuteMsg::DeactivateVotes { user: Some(Addr::unchecked(voter)), limit: None },
-	).unwrap();
+		CourtExecuteMsg::DeactivateVotes {
+			user: Some(Addr::unchecked(voter)),
+			limit: None,
+		},
+	)
+	.unwrap();
 }
 
 pub fn execute_stake_exact_amount(env_deps: &mut (Env, SeiMockEnvDeps), sender: &str, amount: u128) {
@@ -486,78 +476,66 @@ pub fn execute_propose_transaction(
 	);
 }
 
-pub fn execute_vote(
-	env_deps: &mut (Env, SeiMockEnvDeps),
-	sender: &str,
-	id: u32,
-	vote: CourtUserVoteStatus
-) {
+pub fn execute_vote(env_deps: &mut (Env, SeiMockEnvDeps), sender: &str, id: u32, vote: CourtUserVoteStatus) {
 	let user_votes = query_user_stats(&env_deps, sender).unwrap().staked_votes;
 	execute(
 		env_deps,
-		Some(MessageInfo { sender: Addr::unchecked(sender), funds: vec![] }),
-		CourtExecuteMsg::Vote { id, vote }
-	).unwrap();
+		Some(MessageInfo {
+			sender: Addr::unchecked(sender),
+			funds: vec![],
+		}),
+		CourtExecuteMsg::Vote { id, vote },
+	)
+	.unwrap();
 	assert_eq!(
 		query_user_vote_info(&env_deps, sender, id),
-		Ok(
-			CourtUserVoteInfoJsonable { active_votes: user_votes, vote }
-		)
+		Ok(CourtUserVoteInfoJsonable {
+			active_votes: user_votes,
+			vote
+		})
 	);
 }
 
-pub fn advance_time_to_vote_end(
-	env_deps: &mut (Env, SeiMockEnvDeps),
-	proposal_id: u32
-) {
+pub fn advance_time_to_vote_end(env_deps: &mut (Env, SeiMockEnvDeps), proposal_id: u32) {
 	let proposal = query_get_proposal(&env_deps, proposal_id).unwrap().unwrap();
 	let proposal_expiry_timestamp = Timestamp::from_millis(proposal.info.expiry_timestamp_ms);
 	if env_deps.0.block.time < proposal_expiry_timestamp {
 		env_deps.0.block.time = proposal_expiry_timestamp;
 	}
 }
-pub fn advance_time_to_execution_expiry(
-	env_deps: &mut (Env, SeiMockEnvDeps),
-	proposal_id: u32
-) {
+pub fn advance_time_to_execution_expiry(env_deps: &mut (Env, SeiMockEnvDeps), proposal_id: u32) {
 	let config = query_config(&env_deps).unwrap();
 	let proposal = query_get_proposal(&env_deps, proposal_id).unwrap().unwrap();
 	let mut proposal_expiry_timestamp = Timestamp::from_millis(proposal.info.expiry_timestamp_ms);
-	proposal_expiry_timestamp = proposal_expiry_timestamp.plus_seconds(config.execution_expiry_time_seconds as u64).plus_nanos(1000000);
+	proposal_expiry_timestamp = proposal_expiry_timestamp
+		.plus_seconds(config.execution_expiry_time_seconds as u64)
+		.plus_nanos(1000000);
 	if env_deps.0.block.time < proposal_expiry_timestamp {
 		env_deps.0.block.time = proposal_expiry_timestamp;
 	}
 }
 
-fn minimum_proposal_vote_amount(
-	env_deps: &(Env, SeiMockEnvDeps),
-) -> u128 {
+fn minimum_proposal_vote_amount(env_deps: &(Env, SeiMockEnvDeps)) -> u128 {
 	let config = query_config(env_deps).unwrap();
 	let total_supply = get_known_vote_supply(env_deps);
 	(total_supply * config.minimum_vote_proposal_percent as u128).div_ceil(100)
 }
 
-fn minimum_vote_turnout_amount(
-	env_deps: &(Env, SeiMockEnvDeps),
-) -> u128 {
+fn minimum_vote_turnout_amount(env_deps: &(Env, SeiMockEnvDeps)) -> u128 {
 	let config = query_config(env_deps).unwrap();
 	let total_supply = get_known_vote_supply(env_deps);
 	(total_supply * config.minimum_vote_turnout_percent as u128).div_ceil(100)
 }
 
 /// How many votes would a proposal need to passes (pass percent of minimum turnout)
-fn minimum_votes_for_pass(
-	env_deps: &(Env, SeiMockEnvDeps),
-) -> u128 {
+fn minimum_votes_for_pass(env_deps: &(Env, SeiMockEnvDeps)) -> u128 {
 	let config = query_config(env_deps).unwrap();
 	let minimum_turnout = minimum_vote_turnout_amount(env_deps);
 
 	(minimum_turnout * config.minimum_vote_pass_percent as u128).div_ceil(100)
 }
 
-fn minimum_votes_for_guaranteed_pass(
-	env_deps: &(Env, SeiMockEnvDeps),
-) -> u128 {
+fn minimum_votes_for_guaranteed_pass(env_deps: &(Env, SeiMockEnvDeps)) -> u128 {
 	let config = query_config(env_deps).unwrap();
 	let total_supply = get_known_vote_supply(env_deps);
 
@@ -568,7 +546,7 @@ pub fn execute_create_unanimous_proposal(
 	env_deps: &mut (Env, SeiMockEnvDeps),
 	msgs: Vec<ProposedCourtMsgJsonable>,
 	expiry_time_seconds: u32,
-	voter_for: &str
+	voter_for: &str,
 ) -> u32 {
 	let new_proposal_id = query_proposal_amount(&env_deps).unwrap();
 	let pass_votes_required = minimum_proposal_vote_amount(env_deps).max(minimum_vote_turnout_amount(env_deps));
@@ -581,7 +559,7 @@ pub fn execute_create_unanimous_proposal_with_low_turnout(
 	env_deps: &mut (Env, SeiMockEnvDeps),
 	msgs: Vec<ProposedCourtMsgJsonable>,
 	expiry_time_seconds: u32,
-	voter_for: &str
+	voter_for: &str,
 ) -> u32 {
 	let new_proposal_id = query_proposal_amount(&env_deps).unwrap();
 	let minimum_proposal_vote_amount = minimum_proposal_vote_amount(env_deps);
@@ -598,7 +576,7 @@ pub fn execute_create_guaranteed_passing_proposal(
 	env_deps: &mut (Env, SeiMockEnvDeps),
 	msgs: Vec<ProposedCourtMsgJsonable>,
 	expiry_time_seconds: u32,
-	voter_for: &str
+	voter_for: &str,
 ) -> u32 {
 	let new_proposal_id = query_proposal_amount(&env_deps).unwrap();
 
@@ -608,7 +586,6 @@ pub fn execute_create_guaranteed_passing_proposal(
 
 	new_proposal_id
 }
-
 
 pub fn execute_create_passing_proposal(
 	env_deps: &mut (Env, SeiMockEnvDeps),
@@ -629,7 +606,7 @@ pub fn execute_create_passing_proposal(
 
 	new_proposal_id
 }
-/* 
+/*
 pub fn execute_create_passing_proposal_low_turnout(
 	env_deps: &mut (Env, SeiMockEnvDeps),
 	msgs: Vec<ProposedCourtMsgJsonable>,
@@ -654,9 +631,8 @@ pub fn execute_create_failing_proposal(
 	let config = query_config(env_deps).unwrap();
 
 	let approve_vote_amount = minimum_proposal_vote_amount(env_deps);
-	let oppose_vote_amount = (approve_vote_amount * 100).div_ceil(
-		config.minimum_vote_pass_percent.into()
-	)  + 1 - approve_vote_amount;
+	let oppose_vote_amount =
+		(approve_vote_amount * 100).div_ceil(config.minimum_vote_pass_percent.into()) + 1 - approve_vote_amount;
 
 	assert!(approve_vote_amount + oppose_vote_amount < get_known_vote_supply(env_deps));
 

@@ -17,13 +17,13 @@ mod admin_change_admin;
 mod admin_change_config;
 mod admin_disallow_new_proposals;
 mod admin_mint_shares;
+mod deactivate_votes;
+mod execute_proposal;
 mod helpers;
 mod user_propose_transaction;
 mod user_stake_votes;
 mod user_unstake_votes;
 mod user_vote;
-mod deactivate_votes;
-mod execute_proposal;
 
 #[test]
 pub fn instantiate() {
