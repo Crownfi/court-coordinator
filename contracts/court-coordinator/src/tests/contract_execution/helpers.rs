@@ -84,6 +84,14 @@ pub fn query_denom(env_deps: &(Env, SeiMockEnvDeps)) -> Result<CourtQueryRespons
 		CourtQueryMsg::Denom,
 	)?)?)
 }
+pub fn query_total_supply(env_deps: &(Env, SeiMockEnvDeps)) -> Result<CourtQueryResponseTotalSupply, CourtContractError> {
+	let env = env_deps.0.clone();
+	Ok(from_json(crate::contract::query(
+		env_deps.1.as_ref().into_empty(),
+		env,
+		CourtQueryMsg::TotalSupply,
+	)?)?)
+}
 pub fn query_proposal_amount(env_deps: &(Env, SeiMockEnvDeps)) -> Result<u32, CourtContractError> {
 	let env = env_deps.0.clone();
 	Ok(from_json(crate::contract::query(
@@ -338,15 +346,7 @@ pub fn assert_must_pay(env_deps: &mut (Env, SeiMockEnvDeps), sender: &str, msg: 
 
 // Contract stores the number of tokens it minted here
 pub fn get_known_vote_supply(env_deps: &(Env, SeiMockEnvDeps)) -> u128 {
-	use cosmwasm_std::Storage;
-
-	let vote_shares_denom = format!("factory/{}/votes", &env_deps.0.contract.address);
-	env_deps
-		.1
-		.storage
-		.get(vote_shares_denom.as_bytes())
-		.and_then(|bytes| Some(<u128>::from_le_bytes(bytes.try_into().ok()?)))
-		.unwrap_or_default()
+	helpers::query_total_supply(env_deps).unwrap().votes.u128()
 }
 
 pub fn execute_change_admin(env_deps: &mut (Env, SeiMockEnvDeps), sender: Option<&str>, new_admin: &str) {

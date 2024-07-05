@@ -10,9 +10,7 @@ use sei_cosmwasm::{SeiMsg, SeiQueryWrapper};
 use crate::{
 	error::CourtContractError,
 	msg::{
-		CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg,
-		CourtQueryResponseDenom, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote,
-		CourtQueryUserWithActiveProposal,
+		CourtAdminExecuteMsg, CourtExecuteMsg, CourtInstantiateMsg, CourtMigrateMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTotalSupply, CourtQueryResponseTransactionProposal, CourtQueryResponseUserVote, CourtQueryUserWithActiveProposal
 	},
 	proposed_msg::ProposedCourtMsgJsonable,
 	state::{
@@ -183,6 +181,9 @@ pub fn query(_deps: Deps, env: Env, msg: CourtQueryMsg) -> Result<Binary, CourtC
 		)?)?,
 		CourtQueryMsg::Denom => to_json_binary(&CourtQueryResponseDenom {
 			votes: votes_denom(&env),
+		})?,
+		CourtQueryMsg::TotalSupply => to_json_binary(&CourtQueryResponseTotalSupply {
+			votes: total_supply_workaround(&votes_denom(&env))
 		})?,
 		CourtQueryMsg::ProposalAmount => to_json_binary(&(get_transaction_proposal_info_vec().len() as u32))?,
 		CourtQueryMsg::GetProposal { id } => {

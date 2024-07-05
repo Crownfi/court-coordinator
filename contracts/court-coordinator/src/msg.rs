@@ -88,6 +88,8 @@ pub enum CourtQueryMsg {
 	Config,
 	#[returns(CourtQueryResponseDenom)]
 	Denom,
+	#[returns(CourtQueryResponseTotalSupply)]
+	TotalSupply,
 	#[returns(u32)]
 	ProposalAmount,
 	#[returns(Option<CourtQueryResponseTransactionProposal>)]
@@ -127,6 +129,11 @@ pub enum CourtQueryMsg {
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
 pub struct CourtQueryResponseDenom {
 	pub votes: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
+pub struct CourtQueryResponseTotalSupply {
+	pub votes: Uint128,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, JsonSchema, PartialEq, Eq)]
