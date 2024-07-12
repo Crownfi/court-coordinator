@@ -8,7 +8,7 @@ const __dirname = import.meta.dirname;
 export default (env, argv) => {
 	const config = {
 		entry: {
-			"main": ["./src/entrypoint.ts", "./styles/main.css"]
+			"main": ["./src/main.ts", "./styles/main.css"]
 		},
 		module: {
 			rules: [
@@ -44,12 +44,21 @@ export default (env, argv) => {
 				Buffer: ["buffer-lite", "Buffer"],
 			}),
 		],
-		optimization: {
+		optimization: argv.mode == "production" ? {
 			minimizer: [
-				`...`,
-				new CssMinimizerPlugin(),
-			],
+					`...`,
+					new CssMinimizerPlugin(),
+			]
+		} : {
+				providedExports: true,
+				usedExports: true,
+				concatenateModules: true,
+				flagIncludedChunks: true,
+				removeAvailableModules: true,
+				sideEffects: true
 		},
+		devtool: argv.mode == "production" ? undefined : "inline-source-map",
+		stats: argv.mode == "production" ? "normal" : "detailed"
 	};
 	config.mode = argv.mode;
 

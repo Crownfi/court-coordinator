@@ -4,76 +4,139 @@
  * DO NOT MODIFY IT BY HAND.
  * The Rust definition of the associated structs is the source of truth!!
  */
-import {Addr, ArrayOfUint32, ArrayOf_CourtQueryResponseTransactionProposal, ArrayOf_CourtQueryResponseUserVote, ArrayOf_CourtQueryUserWithActiveProposal, CourtAdminExecuteMsg, CourtAppConfigJsonable, CourtExecuteMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryUserWithActiveProposal, CourtUserStatsJsonable, CourtUserVoteInfoJsonable, CourtUserVoteStatus, Nullable_CourtQueryResponseTransactionProposal, ProposedCourtMsgJsonable, Uint32} from "./types.js";
+import {Addr, ArrayOfUint32, ArrayOf_CourtQueryResponseTransactionProposal, ArrayOf_CourtQueryResponseUserVote, ArrayOf_CourtQueryUserWithActiveProposal, CourtAdminExecuteMsg, CourtAppConfigJsonable, CourtExecuteMsg, CourtQueryMsg, CourtQueryResponseDenom, CourtQueryResponseTotalSupply, CourtQueryUserWithActiveProposal, CourtUserStatsJsonable, CourtUserVoteInfoJsonable, CourtUserVoteStatus, Nullable_CourtQueryResponseTransactionProposal, ProposedCourtMsgJsonable, Uint32} from "./types.js";
 import {Coin} from "@cosmjs/amino";
-import {ExecuteInstruction} from "@cosmjs/cosmwasm-stargate";
+import {ExecuteInstruction, WasmExtension} from "@cosmjs/cosmwasm-stargate";
+import {QueryClient} from "@cosmjs/stargate";
 import {ContractBase} from "@crownfi/sei-utils";
-export class CourtCoordinatorContract extends ContractBase {
+export class CourtCoordinatorContract<Q extends QueryClient & WasmExtension> extends ContractBase<Q> {
+	checkVersion(versions: { [name: string]: string } = {"court-coordinator-contract": "0.1.0"}): Promise<void> {
+		return super.checkVersion(versions);
+	}
+	/** Gets config */
 	queryConfig(): Promise<CourtAppConfigJsonable> {
 		const msg = "config" satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
+	/** Gets denom of the tokens which hold special functionality */
 	queryDenom(): Promise<CourtQueryResponseDenom> {
 		const msg = "denom" satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
+	/** Gets the total supply of the tokens which hold special functionality */
+	queryTotalSupply(): Promise<CourtQueryResponseTotalSupply> {
+		const msg = "total_supply" satisfies CourtQueryMsg;
+		return this.query(msg);
+	}
+	/** The number of proposals which exist */
 	queryProposalAmount(): Promise<Uint32> {
 		const msg = "proposal_amount" satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryGetProposal(args: {"id": number}): Promise<Nullable_CourtQueryResponseTransactionProposal> {
+	/** Gets a specific proposal, may be null */
+	queryGetProposal(args: {
+		/** The proposal ID */
+		"id": number
+	}): Promise<Nullable_CourtQueryResponseTransactionProposal> {
 		const msg = {"get_proposal": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryGetProposals(args: {"descending": boolean, "limit"?: number | null, "skip"?: number | null}): Promise<ArrayOf_CourtQueryResponseTransactionProposal> {
+	/** Returns a list of proposals based on the range provided */
+	queryGetProposals(args: {
+		/** if `false`, array will be in ascending order. if `true`, descending order. */
+		"descending": boolean,
+		/** The maximum length of the array */
+		"limit"?: number | null,
+		/** Where to start the array from */
+		"skip"?: number | null
+	}): Promise<ArrayOf_CourtQueryResponseTransactionProposal> {
 		const msg = {"get_proposals": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryUserStats(args: {"user": Addr}): Promise<CourtUserStatsJsonable> {
+	queryUserStats(args: {
+		"user": Addr
+	}): Promise<CourtUserStatsJsonable> {
 		const msg = {"user_stats": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryUserVoteInfo(args: {"proposal_id": number, "user": Addr}): Promise<CourtUserVoteInfoJsonable> {
+	queryUserVoteInfo(args: {
+		"proposal_id": number,
+		"user": Addr
+	}): Promise<CourtUserVoteInfoJsonable> {
 		const msg = {"user_vote_info": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryGetUsersWithActiveProposals(args: {"after"?: CourtQueryUserWithActiveProposal | null, "descending": boolean, "limit"?: number | null}): Promise<ArrayOf_CourtQueryUserWithActiveProposal> {
+	queryGetUsersWithActiveProposals(args: {
+		"after"?: CourtQueryUserWithActiveProposal | null,
+		"descending": boolean,
+		"limit"?: number | null
+	}): Promise<ArrayOf_CourtQueryUserWithActiveProposal> {
 		const msg = {"get_users_with_active_proposals": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryGetUserActiveProposals(args: {"descending": boolean, "limit"?: number | null, "skip"?: number | null, "user": Addr}): Promise<ArrayOfUint32> {
+	queryGetUserActiveProposals(args: {
+		"descending": boolean,
+		"limit"?: number | null,
+		"skip"?: number | null,
+		"user": Addr
+	}): Promise<ArrayOfUint32> {
 		const msg = {"get_user_active_proposals": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	queryGetProposalUserVotes(args: {"after"?: Addr | null, "descending": boolean, "limit"?: number | null, "proposal_id": number}): Promise<ArrayOf_CourtQueryResponseUserVote> {
+	queryGetProposalUserVotes(args: {
+		"after"?: Addr | null,
+		"descending": boolean,
+		"limit"?: number | null,
+		"proposal_id": number
+	}): Promise<ArrayOf_CourtQueryResponseUserVote> {
 		const msg = {"get_proposal_user_votes": args} satisfies CourtQueryMsg;
 		return this.query(msg);
 	}
-	buildStakeIx(funds?: Coin[]): ExecuteInstruction {
-		const msg = "stake" satisfies CourtExecuteMsg;
-		return this.executeIx(msg, funds);
-	}
-	buildUnstakeIx(funds?: Coin[]): ExecuteInstruction {
-		const msg = "unstake" satisfies CourtExecuteMsg;
-		return this.executeIx(msg, funds);
-	}
+	/** Instruction can only be activated by the configured admin */
 	buildAdminIx(args: CourtAdminExecuteMsg, funds?: Coin[]): ExecuteInstruction {
 		const msg = {"admin": args} satisfies CourtExecuteMsg;
 		return this.executeIx(msg, funds);
 	}
-	buildVoteIx(args: {"id": number, "vote": CourtUserVoteStatus}, funds?: Coin[]): ExecuteInstruction {
+	/** "Stake" your voting shares, doing this is what allows you to vote on proposals */
+	buildStakeIx(funds?: Coin[]): ExecuteInstruction {
+		const msg = "stake" satisfies CourtExecuteMsg;
+		return this.executeIx(msg, funds);
+	}
+	/** Have your voting shares which you previously staked returned to you.
+
+You may not do this while you are voting on active proposals */
+	buildUnstakeIx(funds?: Coin[]): ExecuteInstruction {
+		const msg = "unstake" satisfies CourtExecuteMsg;
+		return this.executeIx(msg, funds);
+	}
+	/** Vote on a proposal, you can change your opinion if you'd like, or increase your vote if you stake more. */
+	buildVoteIx(args: {
+		"id": number,
+		"vote": CourtUserVoteStatus
+	}, funds?: Coin[]): ExecuteInstruction {
 		const msg = {"vote": args} satisfies CourtExecuteMsg;
 		return this.executeIx(msg, funds);
 	}
-	buildDeactivateVotesIx(args: {"limit"?: number | null, "user"?: Addr | null} = {}, funds?: Coin[]): ExecuteInstruction {
+	/** This must be done before unstaking */
+	buildDeactivateVotesIx(args: {
+		"limit"?: number | null,
+		"user"?: Addr | null
+	} = {}, funds?: Coin[]): ExecuteInstruction {
 		const msg = {"deactivate_votes": args} satisfies CourtExecuteMsg;
 		return this.executeIx(msg, funds);
 	}
-	buildProposeTransactionIx(args: {"expiry_time_seconds": number, "msgs": ProposedCourtMsgJsonable[]}, funds?: Coin[]): ExecuteInstruction {
+	/** Propose a new transaction */
+	buildProposeTransactionIx(args: {
+		"expiry_time_seconds": number,
+		"msgs": ProposedCourtMsgJsonable[]
+	}, funds?: Coin[]): ExecuteInstruction {
 		const msg = {"propose_transaction": args} satisfies CourtExecuteMsg;
 		return this.executeIx(msg, funds);
 	}
-	buildExecuteProposalIx(args: {"id": number}, funds?: Coin[]): ExecuteInstruction {
+	/** If a proposal has passed, this is how you execute it. */
+	buildExecuteProposalIx(args: {
+		"id": number
+	}, funds?: Coin[]): ExecuteInstruction {
 		const msg = {"execute_proposal": args} satisfies CourtExecuteMsg;
 		return this.executeIx(msg, funds);
 	}

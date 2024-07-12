@@ -1,0 +1,125 @@
+<template cewt-name="court-proposals-container" cewt-extends="div">
+	<button cewt-ref="new-proposal-button" style="display: block; margin: auto;" class="primary">New proposal</button>
+</template>
+<template cewt-name="court-proposal" cewt-extends="div" cewt-attributes="proposal-id">
+	<h2>Proposal&nbsp;<span cewt-ref="proposal-id">??</span></h2>
+	<div class="important-note" cewt-ref="status">
+		Unknown status
+	</div>
+	<div style="display: flex; justify-content: stretch; align-items:stretch; flex-wrap: wrap;">
+		<div class="important-note success">
+			<span cewt-ref="votes-approve-amount">0</span> approval votes (<span cewt-ref="votes-approve-percent">0</span>%)
+		</div>
+		<div class="important-note danger">
+			<span cewt-ref="votes-oppose-amount">0</span> opposing votes (<span cewt-ref="votes-oppose-percent">0</span>%)
+		</div>
+		<div class="important-note">
+			<span cewt-ref="votes-abstain-amount">0</span> abstain votes (<span cewt-ref="votes-abstain-percent">0</span>%)
+		</div>
+	</div>
+	<div class="important-note" cewt-ref="voter-turnout-container">
+		Total votes: <span cewt-ref="votes-turnout-amount">0</span>
+		<span class="hide-if-refs-empty"><br>(Minimum of <span cewt-ref="votes-turnout-needed-amount">0</span> required)</span>
+	</div>
+	<progress-stacked cewt-ref="votes-turnout-progress" style="width: 100%;">
+
+	</progress-stacked>
+	<div class="important-note" cewt-ref="approval-rating-container">
+		Approval rating: <span cewt-ref="approval-rating-percent">0</span>%
+		<span class="hide-if-refs-empty">(Minimum of <span cewt-ref="approval-rating-percent-needed">0</span>% required)</span>
+	</div>
+	<progress-stacked cewt-ref="approval-rating-progress" style="width: 100%;">
+
+	</progress-stacked>
+	<button cewt-ref="voter-details-button" style="display: block; margin: auto;" class="small">Voter details</button>
+	<ol start="0" class="vote-msgs" cewt-ref="msg-list">
+
+	</ol>
+	<div class="important-note">
+		You've used <span cewt-ref="user-proposal-votes">0</span><span class="hide-if-refs-empty">/<span cewt-ref="user-total-votes">0</span></span> of your votes
+	</div>
+	<form cewt-ref="user-vote-form" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+		<label class="button success">Approve<input name="vote" type="radio" value="approve"></label>
+		<label class="button danger">Oppose<input name="vote" type="radio" value="oppose"></label>
+		<label class="button warning">Abstain<input name="vote" type="radio" value="abstain"></label>
+	</form>
+	<button class="primary vote-finalize-button" cewt-ref="execute-button">Execute proposal</button>
+</template>
+
+<template cewt-name="court-proposal-msg-send-coin" cewt-extends="li" cewt-attributes="denom, coin-amount, recipient">
+	Send <span cewt-ref="coins">??? ???</span> to <span cewt-ref="recipient">???</span>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-exec" cewt-extends="li" cewt-attributes="contract, funds, payload">
+	Execute WASM contract <span cewt-ref="contract">???</span> <br>
+	<ul cewt-ref="list"></ul>
+</template>
+
+<template cewt-name="court-proposal-msg-evm-exec" cewt-extends="li" cewt-attributes="contract, asei-amount, payload">
+	Execute EVM contract <span cewt-ref="contract">???</span> <br>
+	<ul cewt-ref="list"></ul>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-upgrade" cewt-extends="li" cewt-attributes="contract, code-id, payload">
+	Upgrade <span cewt-ref="contract">???</span> to code ID <span cewt-ref="code-id">???</span>
+	<pre cewt-ref="payload"></pre>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-ch-admin" cewt-extends="li" cewt-attributes="contract, admin">
+	Set upgrade admin for <span cewt-ref="contract">???</span> to <span cewt-ref="admin">???</span>
+</template>
+
+<template cewt-name="court-proposal-msg-wasm-cl-admin" cewt-extends="li" cewt-attributes="contract">
+	Clear upgrade admin for <span cewt-ref="contract">???</span>
+</template>
+
+<template cewt-name="court-proposal-msg-mint" cewt-extends="li" cewt-attributes="denom, amount">
+	Mint <span cewt-ref="coins">???</span>
+</template>
+
+<template cewt-name="court-proposal-placeholder" cewt-extends="div">
+	<h2>Proposal&nbsp;??</h2>
+	<div class="important-note">
+		Unknown status
+	</div>
+	<div style="display: flex; justify-content: stretch; align-items:stretch; flex-wrap: wrap;">
+		<div class="important-note success">
+			?? approval votes (??%)
+		</div>
+		<div class="important-note danger">
+			?? opposing votes (??%)
+		</div>
+		<div class="important-note">
+			?? abstain votes (??%)
+		</div>
+	</div>
+	<div class="important-note">
+		Total votes: ????<br>
+		(Minimum of ???? required)
+	</div>
+	<progress-stacked style="width: 100%;"></progress-stacked>
+	<div class="important-note">
+		Approval rating: ??%
+		(Minimum of ??% required)
+	</div>
+	<progress-stacked style="width: 100%;"></progress-stacked>
+	<button style="display: block; margin: auto;" class="small">Voter details</button>
+	<ol start="0" class="vote-msgs">
+		<li>Wait for the proposal to load</li>
+	</ol>
+	<div class="important-note">
+		You've used ????/???? of your votes
+	</div>
+	<form style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+		<label class="button success">Approve<input name="vote" type="radio" value="approve"></label>
+		<label class="button danger">Oppose<input name="vote" type="radio" value="oppose"></label>
+		<label class="button warning">Abstain<input name="vote" type="radio" value="abstain"></label>
+	</form>
+	<button class="primary vote-finalize-button">Execute proposal</button>
+</template>
+
+<template cewt-name="court-proposal-vote-details" cewt-extends="dialog" cewt-attributes="proposal-id">
+	<h1>Votes for proposal <span cewt-ref="proposal-id">#</span></h1>
+	<ul cewt-ref="vote-list"></ul>
+	<button style="display: block; margin: auto;" class="small">Close</button>
+</template>

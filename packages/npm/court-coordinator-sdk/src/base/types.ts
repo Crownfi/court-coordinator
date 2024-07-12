@@ -50,7 +50,6 @@ export type ProposedCourtMsgJsonable =
         amount: Uint128;
         denom: FungibleAssetKindString;
         to: string;
-        [k: string]: unknown;
       };
     }
   | {
@@ -58,7 +57,6 @@ export type ProposedCourtMsgJsonable =
         contract: string;
         msg: Binary;
         value: Uint128;
-        [k: string]: unknown;
       };
     }
   | {
@@ -66,7 +64,6 @@ export type ProposedCourtMsgJsonable =
         contract: Addr;
         funds: Coin[];
         msg: Binary;
-        [k: string]: unknown;
       };
     }
   | {
@@ -74,26 +71,22 @@ export type ProposedCourtMsgJsonable =
         contract: Addr;
         msg: Binary;
         new_code_id: number;
-        [k: string]: unknown;
       };
     }
   | {
       change_wasm_contract_admin: {
         contract: Addr;
         new_admin: Addr;
-        [k: string]: unknown;
       };
     }
   | {
       clear_wasm_contract_admin: {
         contract: Addr;
-        [k: string]: unknown;
       };
     }
   | {
       tokenfactory_mint: {
         tokens: Coin;
-        [k: string]: unknown;
       };
     };
 /**
@@ -134,7 +127,7 @@ export type ArrayOf_CourtQueryResponseTransactionProposal = CourtQueryResponseTr
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "CourtUserVoteStatus".
  */
-export type CourtUserVoteStatus = "Abstain" | "Approve" | "Oppose";
+export type CourtUserVoteStatus = "abstain" | "approve" | "oppose";
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "Array_of_CourtQueryResponseUserVote".
@@ -185,10 +178,11 @@ export type CourtAdminExecuteMsg =
  * via the `definition` "CourtExecuteMsg".
  */
 export type CourtExecuteMsg =
-  | ("stake" | "unstake")
   | {
       admin: CourtAdminExecuteMsg;
     }
+  | "stake"
+  | "unstake"
   | {
       vote: {
         id: number;
@@ -217,17 +211,31 @@ export type CourtExecuteMsg =
  * via the `definition` "CourtQueryMsg".
  */
 export type CourtQueryMsg =
-  | ("denom" | "proposal_amount")
   | "config"
+  | "denom"
+  | "total_supply"
+  | "proposal_amount"
   | {
       get_proposal: {
+        /**
+         * The proposal ID
+         */
         id: number;
       };
     }
   | {
       get_proposals: {
+        /**
+         * if `false`, array will be in ascending order. if `true`, descending order.
+         */
         descending: boolean;
+        /**
+         * The maximum length of the array
+         */
         limit?: number | null;
+        /**
+         * Where to start the array from
+         */
         skip?: number | null;
       };
     }
@@ -276,9 +284,7 @@ export type Nullable_CourtQueryResponseTransactionProposal = CourtQueryResponseT
  */
 export type Uint32 = number;
 
-export interface CrownfiSdkMakerAutogen {
-  [k: string]: unknown;
-}
+export interface CrownfiSdkMakerAutogen {}
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
  * via the `definition` "CourtQueryResponseTransactionProposal".
@@ -288,7 +294,6 @@ export interface CourtQueryResponseTransactionProposal {
   messages: ProposedCourtMsgJsonable[];
   proposal_id: number;
   status: TransactionProposalStatus;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -301,7 +306,6 @@ export interface TransactionProposalInfoJsonable {
   votes_abstain: Uint128;
   votes_against: Uint128;
   votes_for: Uint128;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -310,7 +314,6 @@ export interface TransactionProposalInfoJsonable {
 export interface Coin {
   amount: Uint128;
   denom: string;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -319,7 +322,6 @@ export interface Coin {
 export interface CourtQueryResponseUserVote {
   info: CourtUserVoteInfoJsonable;
   user: Addr;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -328,7 +330,6 @@ export interface CourtQueryResponseUserVote {
 export interface CourtUserVoteInfoJsonable {
   active_votes: Uint128;
   vote: CourtUserVoteStatus;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -337,7 +338,6 @@ export interface CourtUserVoteInfoJsonable {
 export interface CourtQueryUserWithActiveProposal {
   proposal_id: number;
   user: Addr;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -352,7 +352,6 @@ export interface CourtAppConfigJsonable {
   minimum_vote_pass_percent: number;
   minimum_vote_proposal_percent: number;
   minimum_vote_turnout_percent: number;
-  [k: string]: unknown;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -376,8 +375,20 @@ export interface CourtInstantiateMsg {
  * via the `definition` "CourtQueryResponseDenom".
  */
 export interface CourtQueryResponseDenom {
+  /**
+   * The voting shares denom
+   */
   votes: string;
-  [k: string]: unknown;
+}
+/**
+ * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
+ * via the `definition` "CourtQueryResponseTotalSupply".
+ */
+export interface CourtQueryResponseTotalSupply {
+  /**
+   * Total supply of voting shares
+   */
+  votes: Uint128;
 }
 /**
  * This interface was referenced by `CrownfiSdkMakerAutogen`'s JSON-Schema
@@ -385,5 +396,4 @@ export interface CourtQueryResponseDenom {
  */
 export interface CourtUserStatsJsonable {
   staked_votes: Uint128;
-  [k: string]: unknown;
 }

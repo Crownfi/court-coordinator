@@ -38,8 +38,8 @@ pub mod permissionless;
 pub mod shares;
 pub mod user;
 
-const CONTRACT_NAME: &str = "court-coordinator-contract";
-const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const COURT_CONTRACT_NAME: &str = "court-coordinator-contract";
+pub const COURT_CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 #[inline]
@@ -50,7 +50,7 @@ pub fn instantiate(
 	msg: CourtInstantiateMsg,
 ) -> Result<Response<SeiMsg>, CourtContractError> {
 	nonpayable(&msg_info)?;
-	set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
+	set_contract_version(deps.storage, COURT_CONTRACT_NAME, COURT_CONTRACT_VERSION)?;
 	CourtAppConfig::try_from(&CourtAppConfigJsonable {
 		allow_new_proposals: true,
 		minimum_vote_proposal_percent: msg.minimum_vote_proposal_percent,

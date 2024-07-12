@@ -66,6 +66,7 @@ pub struct CourtUserVoteInfoJsonable {
 
 #[derive(Debug, Clone, Copy, Serialize, Default, Deserialize, JsonSchema, PartialEq, Eq)]
 #[repr(u8)]
+#[serde(rename_all = "snake_case")]
 pub enum CourtUserVoteStatus {
 	#[default]
 	Abstain = 0,

@@ -1,0 +1,14 @@
+@import url("~@crownfi/css-gothic-fantasy");
+@import url("~@crownfi/sei-webui-utils");
+@import url("./staking_inputs.css");
+@import url("./config_view.css");
+
+#main-tabs {
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 850px;
+}
+
+.hide-if-refs-empty:not(:has([cewt-ref]:not(:empty))) {
+	display: none;
+}

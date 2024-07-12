@@ -5,40 +5,36 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<link href="/bundles/main.css" rel="stylesheet" />
 		<script async src="/bundles/main.js"></script>
-		<title>CrownFi Rewards</title>
+		<title>CrownFi Governance</title>
 	</head>
 	<body>
-		<nav id="menubar">
-			<div class="smartphone tablet">
-				<a href="#" id="menubar-mobile-icon" class="no-ajax"><img class="notio-icon-menu"></a>
-				<div>CrownFi Rewards</div>
-			</div>
-			<ul class="menubar-main-items">
-				<li><a href="/">CrownFi Home</a></li>
-				<li><a class="highlighted" href="/dao/">Royal Court</a></li>
-			</ul>
-			<ul class="menubar-user-items">
-				<li><button class="primary" is="wallet-button">-</button></li>
-			</ul>
-		</nav>
+		<div style="display: flex; gap: 8px; margin: 4px; justify-content: flex-end;">
+			<button class="fantasy-ornamental danger" is="wallet-disconnect" aria-label="Disconnect Wallet"><span class="cicon cicon-size-medium cicon-logout cicon-gradient danger"></span></button>
+			<button class="fantasy-ornamental" is="wallet-options"></button>
+		</div>
+		<menu id="main-tabs" is="fantasy-tabs">
+			<li data-value="user">
+				<span class="cicon cicon-size-large cicon-user cicon-gradient primary"></span>
+				<span class="text-large">User</span>
+			</li>
+			<li data-value="dao">
+				<span class="cicon cicon-size-large cicon-fantasy-crown cicon-gradient primary"></span>
+				<span class="text-large">DAO</span>
+			</li>
+			<li data-value="config">
+				<span class="cicon cicon-size-large cicon-gear cicon-gradient primary"></span>
+				<span class="text-large">Config</span>
+			</li>
+		</menu>
 		<div id="main-content">
 			
 		</div>
-		<div id="loading-cover" class="screen-cover">
-			<div class="titledBox">
-				<div class="title">
-					<p>Please wait</p>
-				</div>
-				<div class="content">
-					<div class="message">
-						<img class="notio-icon-hourglass">
-						<div>
-							<p id="loading-text">Loading...</p>
-						</div>
-					</div>
-					<progress value="0"></progress>
-				</div>
+		<dialog open id="main_loading_cover" aria-labelledby="main_loading_text">
+			<div class="main_loading_spinner" aria-label="Loading spinner">
+				<div class="main_loading_brand"></div>
 			</div>
-		</div>
+			<div id="main_loading_text"><noscript>This web application cannot function with JavaScript disabled</noscript></div>
+			<script>main_loading_text.innerHTML = "";</script>
+		</dialog>
 	</body>
 </html>

@@ -1,0 +1,24 @@
+<template cewt-name="staking-inputs" cewt-extends="div" class="framed-box-small">
+	<h3 class="text-primary text-fantasy">User shares</h3>
+	<p>
+		In order to participate in the DAO, you must stake your votes.
+	</p>
+	<form cewt-ref="form-stake">
+		<div class="trade-amount-balance">
+			Unstaked shares: <span cewt-ref="unstaked-balance"></span>
+		</div>
+		<label class="trade-amount-input">
+			<span class="trade-amount-denom" cewt-ref="unstaked-denom">Shares</span>
+			<input type="number" min="1" class="form-control" name="amount" placeholder="0">
+		</label>
+		<button class="primary small trade-execute">Stake</button>
+	</form>
+
+	<div class="trade-amount-balance">
+		Staked shares: <span cewt-ref="staked-balance"></span>
+	</div>
+	<div class="important-note">
+		You may only unstake your voting shares after all proposals you've voted on have been finalized.
+	</div>
+	<button cewt-ref="button-unstake" class="primary small trade-execute">Unstake</button>
+</template>

@@ -6,29 +6,7 @@ export class StakingInputsRefs {
 	constructor(element: HTMLElement | ShadowRoot) {
 		this.#element = element;
 	}
-	#formUnstake?: HTMLFormElementKnownControls<StakingInputsFormCollection1, StakingInputsFormValues1>;
-	get formUnstake() {
-		if (this.#formUnstake === undefined) {
-			this.#formUnstake = this.#element.querySelector("[cewt-ref=\"form-unstake\"]:not(:scope [is] *)")!;
-			this.#formUnstake.values = normalizeFormValues.bind(this.#formUnstake, this.#formUnstake) as any;
-		}
-		return this.#formUnstake;
-	}
-	#stakedBalance?: HTMLSpanElement;
-	get stakedBalance() {
-		if (this.#stakedBalance === undefined) {
-			this.#stakedBalance = this.#element.querySelector("[cewt-ref=\"staked-balance\"]:not(:scope [is] *)")!;
-		}
-		return this.#stakedBalance;
-	}
-	#stakedDenom?: HTMLSpanElement;
-	get stakedDenom() {
-		if (this.#stakedDenom === undefined) {
-			this.#stakedDenom = this.#element.querySelector("[cewt-ref=\"staked-denom\"]:not(:scope [is] *)")!;
-		}
-		return this.#stakedDenom;
-	}
-	#formStake?: HTMLFormElementKnownControls<StakingInputsFormCollection2, StakingInputsFormValues2>;
+	#formStake?: HTMLFormElementKnownControls<StakingInputsFormCollection1, StakingInputsFormValues1>;
 	get formStake() {
 		if (this.#formStake === undefined) {
 			this.#formStake = this.#element.querySelector("[cewt-ref=\"form-stake\"]:not(:scope [is] *)")!;
@@ -50,12 +28,26 @@ export class StakingInputsRefs {
 		}
 		return this.#unstakedDenom;
 	}
+	#stakedBalance?: HTMLSpanElement;
+	get stakedBalance() {
+		if (this.#stakedBalance === undefined) {
+			this.#stakedBalance = this.#element.querySelector("[cewt-ref=\"staked-balance\"]:not(:scope [is] *)")!;
+		}
+		return this.#stakedBalance;
+	}
+	#buttonUnstake?: HTMLButtonElement;
+	get buttonUnstake() {
+		if (this.#buttonUnstake === undefined) {
+			this.#buttonUnstake = this.#element.querySelector("[cewt-ref=\"button-unstake\"]:not(:scope [is] *)")!;
+		}
+		return this.#buttonUnstake;
+	}
 }
 let _templateStakingInputs: HTMLTemplateElement | null = null;
 function getStakingInputsTemplate(): HTMLTemplateElement {
 	if (_templateStakingInputs == null) {
 		 _templateStakingInputs = document.createElement("template")
-		 _templateStakingInputs.innerHTML = "\n\t<form cewt-ref=\"form-unstake\">\n\t\t<div class=\"trade-amount-balance\">\n\t\t\tStaked shares: <span cewt-ref=\"staked-balance\"></span>\n\t\t</div>\n\t\t<label class=\"trade-amount-input\">\n\t\t\t<input type=\"number\" min=\"1\" class=\"form-control\" name=\"amount\">\n\t\t\t<span cewt-ref=\"staked-denom\" class=\"trade-amount-denom\">Shares</span>\n\t\t</label>\n\t\t<button class=\"primary trade-execute\">Unstake</button>\n\t</form>\n\t<form cewt-ref=\"form-stake\">\n\t\t<div class=\"trade-amount-balance\">\n\t\t\tUnstaked shares: <span cewt-ref=\"unstaked-balance\"></span>\n\t\t</div>\n\t\t<label class=\"trade-amount-input\">\n\t\t\t<input type=\"number\" min=\"1\" class=\"form-control\" name=\"amount\">\n\t\t\t<span class=\"trade-amount-denom\" cewt-ref=\"unstaked-denom\">Shares</span>\n\t\t</label>\n\t\t<button class=\"primary trade-execute\">Stake</button>\n\t</form>\n";
+		 _templateStakingInputs.innerHTML = "\n\t<h3 class=\"text-primary text-fantasy\">User shares</h3>\n\t<p>\n\t\tIn order to participate in the DAO, you must stake your votes.\n\t</p>\n\t<form cewt-ref=\"form-stake\">\n\t\t<div class=\"trade-amount-balance\">\n\t\t\tUnstaked shares: <span cewt-ref=\"unstaked-balance\"></span>\n\t\t</div>\n\t\t<label class=\"trade-amount-input\">\n\t\t\t<span cewt-ref=\"unstaked-denom\" class=\"trade-amount-denom\">Shares</span>\n\t\t\t<input class=\"form-control\" placeholder=\"0\" name=\"amount\" type=\"number\" min=\"1\">\n\t\t</label>\n\t\t<button class=\"primary small trade-execute\">Stake</button>\n\t</form>\n\n\t<div class=\"trade-amount-balance\">\n\t\tStaked shares: <span cewt-ref=\"staked-balance\"></span>\n\t</div>\n\t<div class=\"important-note\">\n\t\tYou may only unstake your voting shares after all proposals you\'ve voted on have been finalized.\n\t</div>\n\t<button class=\"primary small trade-execute\" cewt-ref=\"button-unstake\">Unstake</button>\n";
 	}
 	return _templateStakingInputs;
 }
@@ -91,13 +83,6 @@ export type StakingInputsFormCollection1 = HTMLFormControlsCollection & {
 	namedItem(name: "amount"): HTMLInputElement;
 };
 export type StakingInputsFormValues1 = {
-	"amount": number;
-};
-export type StakingInputsFormCollection2 = HTMLFormControlsCollection & {
-	"amount": HTMLInputElement;
-	namedItem(name: "amount"): HTMLInputElement;
-};
-export type StakingInputsFormValues2 = {
 	"amount": number;
 };
 interface HTMLFormElementKnownControls<C extends HTMLFormControlsCollection, V> extends HTMLFormElement {

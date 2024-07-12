@@ -1,3 +1,4 @@
+import { humanReadableTimeAmount } from "../time_format.js";
 import { TimerTextAutogen } from "./_autogen.js";
 
 export class TimerTextElement extends TimerTextAutogen {
@@ -5,37 +6,7 @@ export class TimerTextElement extends TimerTextAutogen {
 	#callbackFunctions: Set<Function> = new Set();
 	timerInterval: ReturnType<typeof setInterval> | undefined
 	#renderTime() {
-		let diff = Math.round((Date.now() - this.#endTimestampAsNumber) / 1000);
-		if (isNaN(diff)) {
-			this.innerText = "NaN";
-			return;
-		}else if (diff <= 0) {
-			this.innerText = "0s";
-			this.disconnectedCallback(); // clear the timer
-			this.#callbackFunctions.forEach(v => v());
-			return;
-		}
-		this.innerText = (diff % 60) + "s";
-		diff = Math.floor(diff / 60);
-		if (diff <= 0) {
-			return;
-		}
-		this.innerText = (diff % 60) + "m" + this.innerText;
-		diff = Math.floor(diff / 60);
-		if (diff <= 0) {
-			return;
-		}
-		this.innerText = (diff % 24) + "h" + this.innerText;
-		diff = Math.floor(diff / 24);
-		if (diff <= 0) {
-			return;
-		}
-		this.innerText = (diff % 7) + "d" + this.innerText;
-		diff = Math.floor(diff / 7);
-		if (diff <= 0) {
-			return;
-		}
-		this.innerText = diff + "w" + this.innerText;
+		this.innerText = humanReadableTimeAmount(Date.now() - this.#endTimestampAsNumber);
 	}
 	connectedCallback() {
 		if (this.timerInterval != undefined) {
@@ -43,7 +14,7 @@ export class TimerTextElement extends TimerTextAutogen {
 		}
 		this.timerInterval = setInterval(() => {
 			this.#renderTime();
-		}, 999);
+		}, 990);
 		this.#renderTime();
 	}
 	disconnectedCallback() {
@@ -52,6 +23,9 @@ export class TimerTextElement extends TimerTextAutogen {
 	}
 	protected onEndTimestampChanged(_: string | null, newValue: string | null) {
 		this.#endTimestampAsNumber = Number(newValue);
+		if (isNaN(this.#endTimestampAsNumber)) {
+			
+		}
 		this.connectedCallback(); // If the previous time has elapsed, we want to re-start the interval.
 	}
 	/**

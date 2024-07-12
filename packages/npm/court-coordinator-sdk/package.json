@@ -1,6 +1,6 @@
 {
 	"name": "@crownfi/court-coordinator-sdk",
-	"version": "0.8.0",
+	"version": "0.9.0",
 	"main": "dist/index.js",
 	"type": "module",
 	"license": "GPL-3.0-or-later",
@@ -10,16 +10,15 @@
 	},
 	"dependencies": {
 		"tiny-emitter": "^2.1.0",
-		"@cosmjs/cosmwasm-stargate": "^0.32.1",
-		"@cosmjs/proto-signing": "^0.32.1",
-		"@cosmjs/amino": "^0.32.1",
-		"@cosmjs/stargate": "^0.32.1",
-		"@crownfi/sei-js-core": "^4.0.0-beta.0",
-		"@crownfi/sei-utils": "^0.2.10",
-		"math-bigint": "^1.0.0"
+		"@cosmjs/cosmwasm-stargate": "^0.32.4",
+		"@cosmjs/proto-signing": "^0.32.4",
+		"@cosmjs/amino": "^0.32.4",
+		"@cosmjs/stargate": "^0.32.4",
+		"@crownfi/sei-js-core": "^5.2.4",
+		"@crownfi/sei-utils": "^0.3.11"
 	},
 	"devDependencies": {
-		"typescript": "^5.2.2"
+		"typescript": "^5.5.3"
 	},
 	"publishConfig": {
 		"registry": "https://npm.crownfi.io"

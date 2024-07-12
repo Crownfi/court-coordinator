@@ -1,0 +1,126 @@
+<template cewt-name="court-config" cewt-extends="div">
+	<h3 class="text-primary text-fantasy">DAO Config</h3>
+	<p>
+		These are the current configuration settings for the DAO. The admin, if set, can change the configuration options while there are no proposals in progress.
+	</p>
+	<table>
+		<tr>
+			<th>Admin</th><td style="word-break: break-word;" cewt-ref="config-admin">-</td>
+		</tr>
+		<tr>
+			<th>Total shares minted</th>
+			<td cewt-ref="total-shares">-</td>
+		</tr>
+		<tr>
+			<th>Proposals enabled</th>
+			<td>
+				<label class="checkbox">
+					<input type="checkbox" disabled cewt-ref="config-proposals-allowed"><span>&nbsp;</span>
+				</label>
+			</td>
+		</tr>
+		<tr>
+			<th>Minimum votes for new proposal</th>
+			<td>
+				<span cewt-ref="config-min-votes-new-percent">--</span>% of total supply
+				(<span cewt-ref="config-min-votes-new-amount">--</span>)
+			</td>
+		</tr>
+		<tr>
+			<th>Minimum vote turnout for proposal approval</th>
+			<td>
+				<span cewt-ref="config-min-turnout-percent">--</span>% of total supply
+				(<span cewt-ref="config-min-turnout-amount">--</span>)
+			</td>
+		</tr>
+		<tr>
+			<th>Minimum proposal approval rating</th>
+			<td><span cewt-ref="config-min-approval-percent">--</span>%</td>
+		</tr>
+		<tr>
+			<th>Maximum proposal voting time</th><td cewt-ref="config-voting-time">-</td>
+		</tr>
+		<tr>
+			<th>Proposal execution window</th><td cewt-ref="config-execution-window">-</td>
+		</tr>
+		<tr>
+			<th>Last config change time</th><td cewt-ref="config-change-time">-</td>
+		</tr>
+	</table>
+	<h3 class="text-primary text-fantasy">Admin controls</h3>
+	<div cewt-ref="admin-note" class="important-note warning">
+		You're not the admin, so the options below are useless to you.
+	</div>
+	<div style="display: flex; flex-direction: row; align-items: center; justify-content: space-around; flex-wrap: wrap; gap: 4px">
+		<button class="fantasy-ornamental" cewt-ref="admin-config-button">Change config</button>
+		<label class="button fantasy-ornamental"><span>Allow new proposals</span><input cewt-ref="admin-proposals-button" type="checkbox"></label>
+		<button class="fantasy-ornamental" cewt-ref="admin-mint-button">Mint shares</button>
+		<button class="fantasy-ornamental danger" cewt-ref="admin-abdicate-button" >Relinquish adminship</button>
+	</div>
+</template>
+
+<template cewt-name="court-config-modal" cewt-extends="dialog">
+	<h1>Change configuration</h1>
+	<form cewt-ref="form" method="dialog">
+		<label>
+			<span>Minimum votes for new proposal (as percentage of total supply)</span>
+			<input name="minimum_vote_proposal_percent" type="number" min="0" max="100" placeholder="unchanged">
+		</label>
+		<label>
+			<span>Minimum voter turnout (percentage)</span>
+			<input name="minimum_vote_turnout_percent" type="number" min="0" max="100" placeholder="unchanged">
+		</label>
+		<label>
+			<span>Minimum proposal approval rating (percentage)</span>
+			<input name="minimum_vote_pass_percent" type="number" min="0" max="100" placeholder="unchanged">
+		</label>
+		<label>
+			<span>Maximum proposal voting time</span>
+			<input
+				name="max_proposal_expiry_time_seconds"
+				type="text"
+				placeholder="unchanged"
+				title="Enter duration (e.g., 5w4d3h2m1s for 5 weeks, 4 days, 3 hours, 2 minutes, 1 second)."
+				pattern="^\s*(\d+w)?\s*(\d+d)?\s*(\d+h)?\s*(\d+m)?\s*(\d+s)?\s*(\d+ms)?\s*$"
+			>
+		</label>
+		<label>
+			<span>Proposal execution window</span>
+			<input
+				name="execution_expiry_time_seconds"
+				type="text"
+				placeholder="unchanged"
+				title="Enter duration (e.g., 5w4d3h2m1s for 5 weeks, 4 days, 3 hours, 2 minutes, 1 second)."
+				pattern="^\s*(\d+w)?\s*(\d+d)?\s*(\d+h)?\s*(\d+m)?\s*(\d+s)?\s*(\d+ms)?\s*$"
+			>
+		</label>
+		
+		<div class="button-row equal-width">
+			<button class="primary small">Apply changes</button>
+			<button class="small" cewt-ref="cancel-btn">Cancel</button>
+		</div>
+	</form>
+</template>
+
+<template cewt-name="admin-mint-shares-modal" cewt-extends="dialog">
+	<h1>Dilute voting power</h1>
+	<form cewt-ref="form" method="dialog">
+		<label>
+			<span>Shares to mint</span>
+			<input name="amount" type="number" min="1" placeholder="0">
+		</label>
+		<label>
+			<span>Recipiant (leave blank for yourself)</span>
+			<input
+				name="recipient"
+				type="text"
+				title="A valid 0x or sei1 address"
+				pattern="^(0x[a-fA-F0-9]{40}|sei1(?:[a-z0-9]{38}|[a-z0-9]{58}))$"
+			>
+		</label>
+		<div class="button-row equal-width">
+			<button class="primary small">money printer go brrrrr</button>
+			<button class="small" cewt-ref="cancel-btn">Cancel</button>
+		</div>
+	</form>
+</template>
