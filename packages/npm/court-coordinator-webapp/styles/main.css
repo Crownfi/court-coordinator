@@ -2,6 +2,7 @@
 @import url("~@crownfi/sei-webui-utils");
 @import url("./staking_inputs.css");
 @import url("./config_view.css");
+@import url("./proposals.css");
 
 #main-tabs {
 	margin-left: auto;

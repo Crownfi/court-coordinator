@@ -1,6 +1,6 @@
 {
 	"name": "@crownfi/court-coordinator-webapp",
-	"version": "0.1.0",
+	"version": "0.9.0",
 	"main": "dist/bundles/index.js",
 	"license": "GPL-3.0-only",
 	"type": "module",
@@ -18,13 +18,14 @@
 		"@cosmjs/cosmwasm-stargate": "^0.32.4",
 		"@cosmjs/proto-signing": "^0.32.4",
 		"@cosmjs/stargate": "^0.32.4",
-		"@crownfi/sei-js-core": "^5.2.4",
-		"@crownfi/sei-utils": "^0.3.11",
-		"@crownfi/sei-webui-utils": "^0.3.11",
-		"@crownfi/court-coordinator-sdk": "^0.9.0",
+		"@crownfi/sei-js-core": "^5.2.5",
+		"@crownfi/sei-utils": "^0.3.17",
+		"@crownfi/sei-webui-utils": "^0.3.13",
+		"@crownfi/court-coordinator-sdk": "0.9.0",
 		"@aritz-cracker/browser-utils": "^1.3.2",
-		"@crownfi/css-gothic-fantasy": "^1.7.4",
-		"is-utf8": "^0.2.1"
+		"@crownfi/css-gothic-fantasy": "^1.8.1",
+		"is-utf8": "^0.2.1",
+		"sortablejs": "^1.15.2"
 	},
 	"devDependencies": {
 		"buffer-lite": "^2.1.0",
@@ -37,6 +38,7 @@
 		"typescript": "^5.5.3",
 		"webpack": "^5.92.1",
 		"webpack-cli": "^5.1.4",
-		"@types/is-utf8": "^0.2.3"
+		"@types/is-utf8": "^0.2.3",
+		"@types/sortablejs": "^1.15.8"
 	}
 }

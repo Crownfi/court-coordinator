@@ -18,7 +18,7 @@ let _templateCourtProposalsContainer: HTMLTemplateElement | null = null;
 function getCourtProposalsContainerTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposalsContainer == null) {
 		 _templateCourtProposalsContainer = document.createElement("template")
-		 _templateCourtProposalsContainer.innerHTML = "\n\t<button class=\"primary\" cewt-ref=\"new-proposal-button\" style=\"display: block; margin: auto;\">New proposal</button>\n";
+		 _templateCourtProposalsContainer.innerHTML = "\n\t<button style=\"display: block; margin: auto;\" class=\"primary\" cewt-ref=\"new-proposal-button\">New proposal</button>\n\t<div is=\"court-proposal-placeholder\"></div>\n";
 	}
 	return _templateCourtProposalsContainer;
 }
@@ -214,7 +214,7 @@ let _templateCourtProposal: HTMLTemplateElement | null = null;
 function getCourtProposalTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposal == null) {
 		 _templateCourtProposal = document.createElement("template")
-		 _templateCourtProposal.innerHTML = "\n\t<h2>Proposal&nbsp;<span cewt-ref=\"proposal-id\">??</span></h2>\n\t<div class=\"important-note\" cewt-ref=\"status\">\n\t\tUnknown status\n\t</div>\n\t<div style=\"display: flex; justify-content: stretch; align-items:stretch; flex-wrap: wrap;\">\n\t\t<div class=\"important-note success\">\n\t\t\t<span cewt-ref=\"votes-approve-amount\">0</span> approval votes (<span cewt-ref=\"votes-approve-percent\">0</span>%)\n\t\t</div>\n\t\t<div class=\"important-note danger\">\n\t\t\t<span cewt-ref=\"votes-oppose-amount\">0</span> opposing votes (<span cewt-ref=\"votes-oppose-percent\">0</span>%)\n\t\t</div>\n\t\t<div class=\"important-note\">\n\t\t\t<span cewt-ref=\"votes-abstain-amount\">0</span> abstain votes (<span cewt-ref=\"votes-abstain-percent\">0</span>%)\n\t\t</div>\n\t</div>\n\t<div cewt-ref=\"voter-turnout-container\" class=\"important-note\">\n\t\tTotal votes: <span cewt-ref=\"votes-turnout-amount\">0</span>\n\t\t<span class=\"hide-if-refs-empty\"><br>(Minimum of <span cewt-ref=\"votes-turnout-needed-amount\">0</span> required)</span>\n\t</div>\n\t<progress-stacked style=\"width: 100%;\" cewt-ref=\"votes-turnout-progress\">\n\n\t</progress-stacked>\n\t<div class=\"important-note\" cewt-ref=\"approval-rating-container\">\n\t\tApproval rating: <span cewt-ref=\"approval-rating-percent\">0</span>%\n\t\t<span class=\"hide-if-refs-empty\">(Minimum of <span cewt-ref=\"approval-rating-percent-needed\">0</span>% required)</span>\n\t</div>\n\t<progress-stacked style=\"width: 100%;\" cewt-ref=\"approval-rating-progress\">\n\n\t</progress-stacked>\n\t<button class=\"small\" style=\"display: block; margin: auto;\" cewt-ref=\"voter-details-button\">Voter details</button>\n\t<ol start=\"0\" cewt-ref=\"msg-list\" class=\"vote-msgs\">\n\n\t</ol>\n\t<div class=\"important-note\">\n\t\tYou\'ve used <span cewt-ref=\"user-proposal-votes\">0</span><span class=\"hide-if-refs-empty\">/<span cewt-ref=\"user-total-votes\">0</span></span> of your votes\n\t</div>\n\t<form cewt-ref=\"user-vote-form\" style=\"display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;\">\n\t\t<label class=\"button success\">Approve<input name=\"vote\" value=\"approve\" type=\"radio\"></label>\n\t\t<label class=\"button danger\">Oppose<input name=\"vote\" value=\"oppose\" type=\"radio\"></label>\n\t\t<label class=\"button warning\">Abstain<input name=\"vote\" type=\"radio\" value=\"abstain\"></label>\n\t</form>\n\t<button cewt-ref=\"execute-button\" class=\"primary vote-finalize-button\">Execute proposal</button>\n";
+		 _templateCourtProposal.innerHTML = "\n\t<h2>Proposal&nbsp;<span cewt-ref=\"proposal-id\">??</span></h2>\n\t<div class=\"important-note\" cewt-ref=\"status\">\n\t\tUnknown status\n\t</div>\n\t<hr class=\"pattern-stretch\">\n\t<div class=\"votes-breakdown\">\n\t\t<div class=\"important-note success\">\n\t\t\t<span cewt-ref=\"votes-approve-amount\">0</span> approval votes (<span cewt-ref=\"votes-approve-percent\">0</span>%)\n\t\t</div>\n\t\t<div class=\"important-note danger\">\n\t\t\t<span cewt-ref=\"votes-oppose-amount\">0</span> opposing votes (<span cewt-ref=\"votes-oppose-percent\">0</span>%)\n\t\t</div>\n\t\t<div class=\"important-note\">\n\t\t\t<span cewt-ref=\"votes-abstain-amount\">0</span> abstain votes (<span cewt-ref=\"votes-abstain-percent\">0</span>%)\n\t\t</div>\n\t</div>\n\t<div class=\"important-note\" cewt-ref=\"voter-turnout-container\">\n\t\tTotal votes: <span cewt-ref=\"votes-turnout-amount\">0</span>\n\t\t<span class=\"hide-if-refs-empty\"><br>(Minimum of <span cewt-ref=\"votes-turnout-needed-amount\">0</span> required)</span>\n\t</div>\n\t<progress-stacked cewt-ref=\"votes-turnout-progress\" style=\"width: 100%;\">\n\n\t</progress-stacked>\n\t<div cewt-ref=\"approval-rating-container\" class=\"important-note\">\n\t\tApproval rating: <span cewt-ref=\"approval-rating-percent\">0</span>%\n\t\t<span class=\"hide-if-refs-empty\">(Minimum of <span cewt-ref=\"approval-rating-percent-needed\">0</span>% required)</span>\n\t</div>\n\t<progress-stacked style=\"width: 100%;\" cewt-ref=\"approval-rating-progress\">\n\n\t</progress-stacked>\n\t<button cewt-ref=\"voter-details-button\" style=\"display: block; margin: auto;\" class=\"small\">Voter details</button>\n\t<hr class=\"pattern-stretch\">\n\t<ol cewt-ref=\"msg-list\" class=\"vote-msgs\" start=\"0\">\n\n\t</ol>\n\t<hr class=\"pattern-stretch\">\n\t<div class=\"important-note hide-if-refs-empty\">\n\t\tYou\'ve used <span cewt-ref=\"user-proposal-votes\">0</span><span class=\"hide-if-refs-empty\">/<span cewt-ref=\"user-total-votes\">0</span></span> of your votes\n\t</div>\n\t<form cewt-ref=\"user-vote-form\" class=\"fantasy-input-group\">\n\t\t<label class=\"button fantasy success\"><span>Approve</span><input value=\"approve\" name=\"vote\" type=\"radio\"></label>\n\t\t<label class=\"button fantasy danger\"><span>Oppose</span><input name=\"vote\" type=\"radio\" value=\"oppose\"></label>\n\t\t<label class=\"button fantasy warning\"><span>Abstain</span><input name=\"vote\" value=\"abstain\" type=\"radio\"></label>\n\t</form>\n\t<button class=\"primary fantasy-ornamental vote-finalize-button\" cewt-ref=\"execute-button\">Execute proposal</button>\n";
 	}
 	return _templateCourtProposal;
 }
@@ -303,20 +303,20 @@ function getCourtProposalMsgSendCoinTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgSendCoinRefs;
 	static get observedAttributes() {
-		return ["coin-amount", "recipient", "denom"];
+		return ["denom", "recipient", "coin-amount"];
 	}
-	#attributeCoinAmountValue: string | null = null;
-	get coinAmount(): string | null {
-		return this.#attributeCoinAmountValue;
+	#attributeDenomValue: string | null = null;
+	get denom(): string | null {
+		return this.#attributeDenomValue;
 	}
-	set coinAmount(v: string | null) {
+	set denom(v: string | null) {
 		if (v == null) {
-			this.removeAttribute("coin-amount");
+			this.removeAttribute("denom");
 		}else{
-			this.setAttribute("coin-amount", v);
+			this.setAttribute("denom", v);
 		}
 	}
-	protected onCoinAmountChanged(oldValue: string | null, newValue: string | null) {
+	protected onDenomChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	#attributeRecipientValue: string | null = null;
@@ -333,33 +333,33 @@ export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 	protected onRecipientChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
-	#attributeDenomValue: string | null = null;
-	get denom(): string | null {
-		return this.#attributeDenomValue;
+	#attributeCoinAmountValue: string | null = null;
+	get coinAmount(): string | null {
+		return this.#attributeCoinAmountValue;
 	}
-	set denom(v: string | null) {
+	set coinAmount(v: string | null) {
 		if (v == null) {
-			this.removeAttribute("denom");
+			this.removeAttribute("coin-amount");
 		}else{
-			this.setAttribute("denom", v);
+			this.setAttribute("coin-amount", v);
 		}
 	}
-	protected onDenomChanged(oldValue: string | null, newValue: string | null) {
+	protected onCoinAmountChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "coin-amount":
-				this.#attributeCoinAmountValue = newValue;
-				this.onCoinAmountChanged(oldValue, newValue);
+			case "denom":
+				this.#attributeDenomValue = newValue;
+				this.onDenomChanged(oldValue, newValue);
 				break;
 			case "recipient":
 				this.#attributeRecipientValue = newValue;
 				this.onRecipientChanged(oldValue, newValue);
 				break;
-			case "denom":
-				this.#attributeDenomValue = newValue;
-				this.onDenomChanged(oldValue, newValue);
+			case "coin-amount":
+				this.#attributeCoinAmountValue = newValue;
+				this.onCoinAmountChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -421,7 +421,21 @@ function getCourtProposalMsgWasmExecTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmExecRefs;
 	static get observedAttributes() {
-		return ["funds", "payload", "contract"];
+		return ["contract", "funds", "payload"];
+	}
+	#attributeContractValue: string | null = null;
+	get contract(): string | null {
+		return this.#attributeContractValue;
+	}
+	set contract(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("contract");
+		}else{
+			this.setAttribute("contract", v);
+		}
+	}
+	protected onContractChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
 	}
 	#attributeFundsValue: string | null = null;
 	get funds(): string | null {
@@ -451,22 +465,12 @@ export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
-	#attributeContractValue: string | null = null;
-	get contract(): string | null {
-		return this.#attributeContractValue;
-	}
-	set contract(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("contract");
-		}else{
-			this.setAttribute("contract", v);
-		}
-	}
-	protected onContractChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
-	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
+			case "contract":
+				this.#attributeContractValue = newValue;
+				this.onContractChanged(oldValue, newValue);
+				break;
 			case "funds":
 				this.#attributeFundsValue = newValue;
 				this.onFundsChanged(oldValue, newValue);
@@ -474,10 +478,6 @@ export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 			case "payload":
 				this.#attributePayloadValue = newValue;
 				this.onPayloadChanged(oldValue, newValue);
-				break;
-			case "contract":
-				this.#attributeContractValue = newValue;
-				this.onContractChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -664,21 +664,7 @@ function getCourtProposalMsgWasmUpgradeTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmUpgradeRefs;
 	static get observedAttributes() {
-		return ["contract", "code-id", "payload"];
-	}
-	#attributeContractValue: string | null = null;
-	get contract(): string | null {
-		return this.#attributeContractValue;
-	}
-	set contract(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("contract");
-		}else{
-			this.setAttribute("contract", v);
-		}
-	}
-	protected onContractChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["code-id", "payload", "contract"];
 	}
 	#attributeCodeIdValue: string | null = null;
 	get codeId(): string | null {
@@ -708,12 +694,22 @@ export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributeContractValue: string | null = null;
+	get contract(): string | null {
+		return this.#attributeContractValue;
+	}
+	set contract(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("contract");
+		}else{
+			this.setAttribute("contract", v);
+		}
+	}
+	protected onContractChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "contract":
-				this.#attributeContractValue = newValue;
-				this.onContractChanged(oldValue, newValue);
-				break;
 			case "code-id":
 				this.#attributeCodeIdValue = newValue;
 				this.onCodeIdChanged(oldValue, newValue);
@@ -721,6 +717,10 @@ export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 			case "payload":
 				this.#attributePayloadValue = newValue;
 				this.onPayloadChanged(oldValue, newValue);
+				break;
+			case "contract":
+				this.#attributeContractValue = newValue;
+				this.onContractChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -1029,7 +1029,7 @@ let _templateCourtProposalPlaceholder: HTMLTemplateElement | null = null;
 function getCourtProposalPlaceholderTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposalPlaceholder == null) {
 		 _templateCourtProposalPlaceholder = document.createElement("template")
-		 _templateCourtProposalPlaceholder.innerHTML = "\n\t<h2>Proposal&nbsp;??</h2>\n\t<div class=\"important-note\">\n\t\tUnknown status\n\t</div>\n\t<div style=\"display: flex; justify-content: stretch; align-items:stretch; flex-wrap: wrap;\">\n\t\t<div class=\"important-note success\">\n\t\t\t?? approval votes (??%)\n\t\t</div>\n\t\t<div class=\"important-note danger\">\n\t\t\t?? opposing votes (??%)\n\t\t</div>\n\t\t<div class=\"important-note\">\n\t\t\t?? abstain votes (??%)\n\t\t</div>\n\t</div>\n\t<div class=\"important-note\">\n\t\tTotal votes: ????<br>\n\t\t(Minimum of ???? required)\n\t</div>\n\t<progress-stacked style=\"width: 100%;\"></progress-stacked>\n\t<div class=\"important-note\">\n\t\tApproval rating: ??%\n\t\t(Minimum of ??% required)\n\t</div>\n\t<progress-stacked style=\"width: 100%;\"></progress-stacked>\n\t<button style=\"display: block; margin: auto;\" class=\"small\">Voter details</button>\n\t<ol start=\"0\" class=\"vote-msgs\">\n\t\t<li>Wait for the proposal to load</li>\n\t</ol>\n\t<div class=\"important-note\">\n\t\tYou\'ve used ????/???? of your votes\n\t</div>\n\t<form style=\"display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;\">\n\t\t<label class=\"button success\">Approve<input type=\"radio\" value=\"approve\" name=\"vote\"></label>\n\t\t<label class=\"button danger\">Oppose<input value=\"oppose\" name=\"vote\" type=\"radio\"></label>\n\t\t<label class=\"button warning\">Abstain<input name=\"vote\" type=\"radio\" value=\"abstain\"></label>\n\t</form>\n\t<button class=\"primary vote-finalize-button\">Execute proposal</button>\n";
+		 _templateCourtProposalPlaceholder.innerHTML = "\n\t<h2>Proposal&nbsp;??</h2>\n\t<div class=\"important-note\">\n\t\tUnknown status\n\t</div>\n\t<hr>\n\t<div class=\"votes-breakdown\">\n\t\t<div class=\"important-note success\">\n\t\t\t?? approval votes (??%)\n\t\t</div>\n\t\t<div class=\"important-note danger\">\n\t\t\t?? opposing votes (??%)\n\t\t</div>\n\t\t<div class=\"important-note\">\n\t\t\t?? abstain votes (??%)\n\t\t</div>\n\t</div>\n\t<div class=\"important-note\">\n\t\tTotal votes: ????<br>\n\t\t(Minimum of ???? required)\n\t</div>\n\t<progress-stacked style=\"width: 100%;\"></progress-stacked>\n\t<div class=\"important-note\">\n\t\tApproval rating: ??%\n\t\t(Minimum of ??% required)\n\t</div>\n\t<progress-stacked style=\"width: 100%;\"></progress-stacked>\n\t<button class=\"small\" style=\"display: block; margin: auto;\">Voter details</button>\n\t<hr>\n\t<ol class=\"vote-msgs\" start=\"0\">\n\t\t<li>Wait for the proposal to load</li>\n\t</ol>\n\t<div class=\"important-note\">\n\t\tYou\'ve used ????/???? of your votes\n\t</div>\n\t<form style=\"display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;\">\n\t\t<label class=\"button success\">Approve<input type=\"radio\" value=\"approve\" name=\"vote\"></label>\n\t\t<label class=\"button danger\">Oppose<input value=\"oppose\" name=\"vote\" type=\"radio\"></label>\n\t\t<label class=\"button warning\">Abstain<input name=\"vote\" type=\"radio\" value=\"abstain\"></label>\n\t</form>\n\t<button class=\"primary vote-finalize-button\">Execute proposal</button>\n";
 	}
 	return _templateCourtProposalPlaceholder;
 }
@@ -1079,12 +1079,19 @@ export class CourtProposalVoteDetailsRefs {
 		}
 		return this.#voteList;
 	}
+	#closeButton?: HTMLButtonElement;
+	get closeButton() {
+		if (this.#closeButton === undefined) {
+			this.#closeButton = this.#element.querySelector("[cewt-ref=\"close-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#closeButton;
+	}
 }
 let _templateCourtProposalVoteDetails: HTMLTemplateElement | null = null;
 function getCourtProposalVoteDetailsTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposalVoteDetails == null) {
 		 _templateCourtProposalVoteDetails = document.createElement("template")
-		 _templateCourtProposalVoteDetails.innerHTML = "\n\t<h1>Votes for proposal <span cewt-ref=\"proposal-id\">#</span></h1>\n\t<ul cewt-ref=\"vote-list\">\n\n\t</ul>\n\t<button style=\"display: block; margin: auto;\" class=\"small\">Close</button>\n";
+		 _templateCourtProposalVoteDetails.innerHTML = "\n\t<h1>Votes for proposal <span cewt-ref=\"proposal-id\">#</span></h1>\n\t<ul cewt-ref=\"vote-list\"></ul>\n\t<button style=\"display: block; margin: auto;\" class=\"small\" cewt-ref=\"close-button\">Close</button>\n";
 	}
 	return _templateCourtProposalVoteDetails;
 }
@@ -1142,12 +1149,705 @@ export class CourtProposalVoteDetailsAutogen extends HTMLDialogElement {
 		customElements.define("court-proposal-vote-details", this, { extends: "dialog"});
 	}
 }
+export class CourtProposalCreatorRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#maxExpiry?: HTMLSpanElement;
+	get maxExpiry() {
+		if (this.#maxExpiry === undefined) {
+			this.#maxExpiry = this.#element.querySelector("[cewt-ref=\"max-expiry\"]:not(:scope [is] *)")!;
+		}
+		return this.#maxExpiry;
+	}
+	#expiry?: HTMLInputElement;
+	get expiry() {
+		if (this.#expiry === undefined) {
+			this.#expiry = this.#element.querySelector("[cewt-ref=\"expiry\"]:not(:scope [is] *)")!;
+		}
+		return this.#expiry;
+	}
+	#instructionContainer?: HTMLDivElement;
+	get instructionContainer() {
+		if (this.#instructionContainer === undefined) {
+			this.#instructionContainer = this.#element.querySelector("[cewt-ref=\"instruction-container\"]:not(:scope [is] *)")!;
+		}
+		return this.#instructionContainer;
+	}
+	#executeButton?: HTMLButtonElement;
+	get executeButton() {
+		if (this.#executeButton === undefined) {
+			this.#executeButton = this.#element.querySelector("[cewt-ref=\"execute-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#executeButton;
+	}
+	#cancelButton?: HTMLButtonElement;
+	get cancelButton() {
+		if (this.#cancelButton === undefined) {
+			this.#cancelButton = this.#element.querySelector("[cewt-ref=\"cancel-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#cancelButton;
+	}
+}
+let _templateCourtProposalCreator: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreator == null) {
+		 _templateCourtProposalCreator = document.createElement("template")
+		 _templateCourtProposalCreator.innerHTML = "\n\t<h1>Create new proposal</h1>\n\t<label>\n\t\t<span>Voting time<span class=\"hide-if-refs-empty\"> (maximum is <span cewt-ref=\"max-expiry\"></span>)</span></span>\n\t\t<input pattern=\"^\\s*(\\d+w)?\\s*(\\d+d)?\\s*(\\d+h)?\\s*(\\d+m)?\\s*(\\d+s)?\\s*(\\d+ms)?\\s*$\" cewt-ref=\"expiry\" placeholder=\"\" type=\"text\" title=\"Enter duration (e.g., 5w4d3h2m1s for 5 weeks, 4 days, 3 hours, 2 minutes, 1 second).\" name=\"expiry\">\n\t</label>\n\t<p>Instructions will be executed in the order specified. If any fail, the entire transaction will fail.</p>\n\t<div cewt-ref=\"instruction-container\">\n\n\t</div>\n\t<button style=\"display: block; margin: 4px auto\" class=\"small\">Add instruction</button>\n\t<dropdown-menu click-trigger=\"primary\" linked-elements=\"*:has(+ #this)\">\n\t\t<dropdown-menu-item value=\"send_coin\">Send coin (Native, ERC20, or CW20)</dropdown-menu-item>\n\t\t<dropdown-menu-item value=\"execute_evm\">EVM instruction</dropdown-menu-item>\n\t\t<dropdown-menu-item value=\"execute_wasm\">CosmWasm instruction</dropdown-menu-item>\n\t\t<dropdown-menu-item value=\"upgrade_wasm_contract\">Upgrade CosmWasm contract</dropdown-menu-item>\n\t\t<dropdown-menu-item value=\"change_wasm_contract_admin\">Change CosmWasm contract admin</dropdown-menu-item>\n\t\t<dropdown-menu-item value=\"clear_wasm_contract_admin\">Clear CosmWasm contract admin</dropdown-menu-item>\n\t\t<dropdown-menu-item value=\"tokenfactory_mint\">Mint coins</dropdown-menu-item>\n\t</dropdown-menu>\n\n\t<div class=\"button-row equal-width\">\n\t\t<button class=\"primary small\" cewt-ref=\"execute-button\">Propose</button>\n\t\t<button cewt-ref=\"cancel-button\" class=\"small\">Cancel</button>\n\t</div>\n";
+	}
+	return _templateCourtProposalCreator;
+}
+export class CourtProposalCreatorAutogen extends HTMLDialogElement {
+	readonly refs: CourtProposalCreatorRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator", this, { extends: "dialog"});
+	}
+}
+export class CourtProposalCreatorSendCoinRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorSendCoinFormCollection2, CourtProposalCreatorSendCoinFormValues2>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorSendCoin: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorSendCoinTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorSendCoin == null) {
+		 _templateCourtProposalCreatorSendCoin = document.createElement("template")
+		 _templateCourtProposalCreatorSendCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button class=\"danger short delete-button\" cewt-ref=\"delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Send coin</h5>\n\t\t<label>\n\t\t\t<span>Recipient</span>\n\t\t\t<input type=\"text\" pattern=\"^(0x[a-fA-F0-9]{40}|sei1(?:[a-z0-9]{38}|[a-z0-9]{58}))$\" placeholder=\"sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5\" name=\"recipient\" title=\"A valid 0x or sei1 address\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Denom (native tokens should have their base unit entered as is, ERC20 tokens should be prepended with \"erc20/\", and sei1 tokens should be prepended with \"cw20/\")</span>\n\t\t\t<input name=\"denom\" type=\"text\" placeholder=\"usei\" title=\"A token base unit\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (no decimals)</span>\n\t\t\t<input min=\"1\" step=\"1\" placeholder=\"0\" type=\"number\" name=\"amount\">\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorSendCoin;
+}
+export class CourtProposalCreatorSendCoinAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorSendCoinRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorSendCoinTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-send-coin"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorSendCoinRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-send-coin", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorExecuteEvmRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorExecuteEvmFormCollection3, CourtProposalCreatorExecuteEvmFormValues3>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorExecuteEvm: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorExecuteEvmTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorExecuteEvm == null) {
+		 _templateCourtProposalCreatorExecuteEvm = document.createElement("template")
+		 _templateCourtProposalCreatorExecuteEvm.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" aria-label=\"delete\" class=\"danger short delete-button\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>EVM Instruction</h5>\n\t\t<label>\n\t\t\t<span>Recipient</span>\n\t\t\t<input name=\"recipient\" pattern=\"^0x[a-fA-F0-9]{40}$\" title=\"A valid 0x address\" type=\"text\" placeholder=\"0x0000000000000000000000000000000000000000\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>aSEI (not uSEI, 1000000000000 aSEI = 1 uSEI, kind of like \"wei\")</span>\n\t\t\t<input name=\"amount\" placeholder=\"0\" min=\"0\" step=\"1\" type=\"number\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Instruction data (Base64 or hex-encoded)</span>\n\t\t\t<textarea name=\"data\"></textarea>\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorExecuteEvm;
+}
+export class CourtProposalCreatorExecuteEvmAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorExecuteEvmRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorExecuteEvmTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-execute-evm"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorExecuteEvmRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-execute-evm", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorExecuteWasmRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorExecuteWasmFormCollection4, CourtProposalCreatorExecuteWasmFormValues4>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+	#coinsContainer?: HTMLDivElement;
+	get coinsContainer() {
+		if (this.#coinsContainer === undefined) {
+			this.#coinsContainer = this.#element.querySelector("[cewt-ref=\"coins-container\"]:not(:scope [is] *)")!;
+		}
+		return this.#coinsContainer;
+	}
+	#addCoinsButton?: HTMLButtonElement;
+	get addCoinsButton() {
+		if (this.#addCoinsButton === undefined) {
+			this.#addCoinsButton = this.#element.querySelector("[cewt-ref=\"add-coins-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#addCoinsButton;
+	}
+}
+let _templateCourtProposalCreatorExecuteWasm: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorExecuteWasmTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorExecuteWasm == null) {
+		 _templateCourtProposalCreatorExecuteWasm = document.createElement("template")
+		 _templateCourtProposalCreatorExecuteWasm.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>CosmWasm Instruction</h5>\n\t\t<label>\n\t\t\t<span>Contract</span>\n\t\t\t<input title=\"A valid sei1 address\" placeholder=\"sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n\" pattern=\"^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$\" name=\"recipient\" type=\"text\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Instruction data</span>\n\t\t\t<textarea name=\"data\"></textarea>\n\t\t</label>\n\t\t<label><input name=\"data_type\" type=\"radio\" value=\"json\" checked=\"\"><span>JSON (used by most contracts)</span></label>\n\t\t<!-- <label><input type=\"radio\" name=\"data_type\" value=\"printable\"><span>Printable non-JSON</span></label> -->\n\t\t<label><input name=\"data_type\" value=\"base64\" type=\"radio\"><span>Base64</span></label>\n\t\t<div cewt-ref=\"coins-container\">\n\t\t</div>\n\t\t<button style=\"display: block; margin: auto\" class=\"small\" cewt-ref=\"add-coins-button\">Add coin</button>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorExecuteWasm;
+}
+export class CourtProposalCreatorExecuteWasmAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorExecuteWasmRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorExecuteWasmTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-execute-wasm"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorExecuteWasmRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-execute-wasm", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorExecuteWasmCoinRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorExecuteWasmCoinFormCollection5, CourtProposalCreatorExecuteWasmCoinFormValues5>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorExecuteWasmCoin: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorExecuteWasmCoinTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorExecuteWasmCoin == null) {
+		 _templateCourtProposalCreatorExecuteWasmCoin = document.createElement("template")
+		 _templateCourtProposalCreatorExecuteWasmCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button aria-label=\"delete\" cewt-ref=\"delete-button\" class=\"danger short delete-button\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<label>\n\t\t\t<span>Denom (native tokens should have their base unit entered as is, ERC20 tokens should be prepended with \"erc20/\", and sei1 tokens should be prepended with \"cw20/\")</span>\n\t\t\t<input name=\"denom\" title=\"A token base unit\" placeholder=\"usei\" type=\"text\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (no decimals)</span>\n\t\t\t<input placeholder=\"0\" min=\"1\" step=\"1\" required=\"\" name=\"amount\" type=\"number\">\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorExecuteWasmCoin;
+}
+export class CourtProposalCreatorExecuteWasmCoinAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorExecuteWasmCoinRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorExecuteWasmCoinTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-execute-wasm-coin"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorExecuteWasmCoinRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-execute-wasm-coin", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorDaoAdminRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorDaoAdminFormCollection6, CourtProposalCreatorDaoAdminFormValues6>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorDaoAdmin: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorDaoAdminTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorDaoAdmin == null) {
+		 _templateCourtProposalCreatorDaoAdmin = document.createElement("template")
+		 _templateCourtProposalCreatorDaoAdmin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>DAO admin</h5>\n\t\t<label>\n\t\t\t<span>New admin</span>\n\t\t\t<input pattern=\"^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$\" name=\"admin\" type=\"text\" placeholder=\"sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5\" title=\"A valid sei1 address\">\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorDaoAdmin;
+}
+export class CourtProposalCreatorDaoAdminAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorDaoAdminRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorDaoAdminTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-dao-admin"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorDaoAdminRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-dao-admin", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorUpgradeWasmRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorUpgradeWasmFormCollection7, CourtProposalCreatorUpgradeWasmFormValues7>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorUpgradeWasm: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorUpgradeWasmTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorUpgradeWasm == null) {
+		 _templateCourtProposalCreatorUpgradeWasm = document.createElement("template")
+		 _templateCourtProposalCreatorUpgradeWasm.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" aria-label=\"delete\" class=\"danger short delete-button\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Upgrade CosmWasm contract</h5>\n\t\t<label>\n\t\t\t<span>Contract</span>\n\t\t\t<input type=\"text\" placeholder=\"sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n\" title=\"A valid sei1 address\" pattern=\"^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$\" name=\"recipient\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>New Code ID (required)</span>\n\t\t\t<input placeholder=\"0\" step=\"1\" name=\"amount\" type=\"number\" min=\"1\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Instruction data</span>\n\t\t\t<textarea name=\"data\"></textarea>\n\t\t</label>\n\t\t<label><input name=\"data_type\" value=\"json\" type=\"radio\"><span>JSON (used by most contracts)</span></label>\n\t\t<label><input type=\"radio\" name=\"data_type\" value=\"printable\"><span>Printable non-JSON</span></label>\n\t\t<label><input value=\"base64\" name=\"data_type\" type=\"radio\"><span>Base64-encoded</span></label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorUpgradeWasm;
+}
+export class CourtProposalCreatorUpgradeWasmAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorUpgradeWasmRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorUpgradeWasmTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-upgrade-wasm"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorUpgradeWasmRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-upgrade-wasm", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorChangeWasmAdminRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorChangeWasmAdminFormCollection8, CourtProposalCreatorChangeWasmAdminFormValues8>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorChangeWasmAdmin: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorChangeWasmAdminTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorChangeWasmAdmin == null) {
+		 _templateCourtProposalCreatorChangeWasmAdmin = document.createElement("template")
+		 _templateCourtProposalCreatorChangeWasmAdmin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Change CosmWasm contract admin</h5>\n\t\t<label>\n\t\t\t<span>Contract (required)</span>\n\t\t\t<input required=\"\" type=\"text\" title=\"A valid sei1 address\" name=\"recipient\" placeholder=\"sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n\" pattern=\"^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>New admin (required)</span>\n\t\t\t<input required=\"\" placeholder=\"sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5\" name=\"admin\" type=\"text\" title=\"A valid sei1 address\" pattern=\"^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$\">\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorChangeWasmAdmin;
+}
+export class CourtProposalCreatorChangeWasmAdminAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorChangeWasmAdminRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorChangeWasmAdminTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-change-wasm-admin"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorChangeWasmAdminRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-change-wasm-admin", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorClearWasmAdminRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorClearWasmAdminFormCollection9, CourtProposalCreatorClearWasmAdminFormValues9>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorClearWasmAdmin: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorClearWasmAdminTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorClearWasmAdmin == null) {
+		 _templateCourtProposalCreatorClearWasmAdmin = document.createElement("template")
+		 _templateCourtProposalCreatorClearWasmAdmin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button aria-label=\"delete\" class=\"danger short delete-button\" cewt-ref=\"delete-button\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Clear CosmWasm contract admin</h5>\n\t\t<label>\n\t\t\t<span>Contract (required)</span>\n\t\t\t<input pattern=\"^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$\" required=\"\" name=\"recipient\" type=\"text\" title=\"A valid sei1 address\" placeholder=\"sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n\">\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorClearWasmAdmin;
+}
+export class CourtProposalCreatorClearWasmAdminAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorClearWasmAdminRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorClearWasmAdminTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-clear-wasm-admin"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorClearWasmAdminRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-clear-wasm-admin", this, { extends: "div"});
+	}
+}
+export class CourtProposalCreatorMintCoinRefs {
+	#element: HTMLElement | ShadowRoot;
+	constructor(element: HTMLElement | ShadowRoot) {
+		this.#element = element;
+	}
+	#deleteButton?: HTMLButtonElement;
+	get deleteButton() {
+		if (this.#deleteButton === undefined) {
+			this.#deleteButton = this.#element.querySelector("[cewt-ref=\"delete-button\"]:not(:scope [is] *)")!;
+		}
+		return this.#deleteButton;
+	}
+	#form?: HTMLFormElementKnownControls<CourtProposalCreatorMintCoinFormCollection10, CourtProposalCreatorMintCoinFormValues10>;
+	get form() {
+		if (this.#form === undefined) {
+			this.#form = this.#element.querySelector("[cewt-ref=\"form\"]:not(:scope [is] *)")!;
+			this.#form.values = normalizeFormValues.bind(this.#form, this.#form) as any;
+		}
+		return this.#form;
+	}
+}
+let _templateCourtProposalCreatorMintCoin: HTMLTemplateElement | null = null;
+function getCourtProposalCreatorMintCoinTemplate(): HTMLTemplateElement {
+	if (_templateCourtProposalCreatorMintCoin == null) {
+		 _templateCourtProposalCreatorMintCoin = document.createElement("template")
+		 _templateCourtProposalCreatorMintCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Mint coin</h5>\n\t\t<label>\n\t\t\t<span>Denom (required) - Tokenfactory token base unit</span>\n\t\t\t<input type=\"text\" title=\"A token base unit\" name=\"denom\" required=\"\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (required, no decimals)</span>\n\t\t\t<input placeholder=\"0\" min=\"1\" name=\"amount\" step=\"1\" type=\"number\" required=\"\">\n\t\t</label>\n\t</form>\n";
+	}
+	return _templateCourtProposalCreatorMintCoin;
+}
+export class CourtProposalCreatorMintCoinAutogen extends HTMLDivElement {
+	readonly refs: CourtProposalCreatorMintCoinRefs;
+	constructor() {
+		super();
+		if (this.childElementCount == 0) {
+			this.appendChild(
+				getCourtProposalCreatorMintCoinTemplate()
+					.content
+					.cloneNode(true)
+			);
+		}
+		this.setAttribute("is", "court-proposal-creator-mint-coin"); // allow for easy query selecting
+		this.refs = new CourtProposalCreatorMintCoinRefs(this);
+	}
+	connectedCallback() {
+		// To be overridden by child class
+	}
+	disconnectedCallback() {
+		// To be overridden by child class
+	}
+	adoptedCallback() {
+		// To be overridden by child class
+	}
+	public static registerElement() {
+		customElements.define("court-proposal-creator-mint-coin", this, { extends: "div"});
+	}
+}
 export type CourtProposalFormCollection1 = HTMLFormControlsCollection & {
 	"vote": RadioNodeList;
 	namedItem(name: "vote"): RadioNodeList;
 };
 export type CourtProposalFormValues1 = {
-	"vote": "" | "approve" | "abstain" | "oppose";
+	"vote": "" | "oppose" | "approve" | "abstain";
+};
+export type CourtProposalCreatorSendCoinFormCollection2 = HTMLFormControlsCollection & {
+	"recipient": HTMLInputElement;
+	namedItem(name: "recipient"): HTMLInputElement;
+	"denom": HTMLInputElement;
+	namedItem(name: "denom"): HTMLInputElement;
+	"amount": HTMLInputElement;
+	namedItem(name: "amount"): HTMLInputElement;
+};
+export type CourtProposalCreatorSendCoinFormValues2 = {
+	"recipient": string;
+	"denom": string;
+	"amount": number;
+};
+export type CourtProposalCreatorExecuteEvmFormCollection3 = HTMLFormControlsCollection & {
+	"recipient": HTMLInputElement;
+	namedItem(name: "recipient"): HTMLInputElement;
+	"amount": HTMLInputElement;
+	namedItem(name: "amount"): HTMLInputElement;
+	"data": HTMLTextAreaElement;
+	namedItem(name: "data"): HTMLTextAreaElement;
+};
+export type CourtProposalCreatorExecuteEvmFormValues3 = {
+	"recipient": string;
+	"amount": number;
+	"data": string;
+};
+export type CourtProposalCreatorExecuteWasmFormCollection4 = HTMLFormControlsCollection & {
+	"recipient": HTMLInputElement;
+	namedItem(name: "recipient"): HTMLInputElement;
+	"data": HTMLTextAreaElement;
+	namedItem(name: "data"): HTMLTextAreaElement;
+	"data_type": RadioNodeList;
+	namedItem(name: "data_type"): RadioNodeList;
+};
+export type CourtProposalCreatorExecuteWasmFormValues4 = {
+	"recipient": string;
+	"data": string;
+	"data_type": "" | "json" | "base64";
+};
+export type CourtProposalCreatorExecuteWasmCoinFormCollection5 = HTMLFormControlsCollection & {
+	"denom": HTMLInputElement;
+	namedItem(name: "denom"): HTMLInputElement;
+	"amount": HTMLInputElement;
+	namedItem(name: "amount"): HTMLInputElement;
+};
+export type CourtProposalCreatorExecuteWasmCoinFormValues5 = {
+	"denom": string;
+	"amount": number;
+};
+export type CourtProposalCreatorDaoAdminFormCollection6 = HTMLFormControlsCollection & {
+	"admin": HTMLInputElement;
+	namedItem(name: "admin"): HTMLInputElement;
+};
+export type CourtProposalCreatorDaoAdminFormValues6 = {
+	"admin": string;
+};
+export type CourtProposalCreatorUpgradeWasmFormCollection7 = HTMLFormControlsCollection & {
+	"recipient": HTMLInputElement;
+	namedItem(name: "recipient"): HTMLInputElement;
+	"amount": HTMLInputElement;
+	namedItem(name: "amount"): HTMLInputElement;
+	"data": HTMLTextAreaElement;
+	namedItem(name: "data"): HTMLTextAreaElement;
+	"data_type": RadioNodeList;
+	namedItem(name: "data_type"): RadioNodeList;
+};
+export type CourtProposalCreatorUpgradeWasmFormValues7 = {
+	"recipient": string;
+	"amount": number;
+	"data": string;
+	"data_type": "" | "base64" | "json" | "printable";
+};
+export type CourtProposalCreatorChangeWasmAdminFormCollection8 = HTMLFormControlsCollection & {
+	"recipient": HTMLInputElement;
+	namedItem(name: "recipient"): HTMLInputElement;
+	"admin": HTMLInputElement;
+	namedItem(name: "admin"): HTMLInputElement;
+};
+export type CourtProposalCreatorChangeWasmAdminFormValues8 = {
+	"recipient": string;
+	"admin": string;
+};
+export type CourtProposalCreatorClearWasmAdminFormCollection9 = HTMLFormControlsCollection & {
+	"recipient": HTMLInputElement;
+	namedItem(name: "recipient"): HTMLInputElement;
+};
+export type CourtProposalCreatorClearWasmAdminFormValues9 = {
+	"recipient": string;
+};
+export type CourtProposalCreatorMintCoinFormCollection10 = HTMLFormControlsCollection & {
+	"denom": HTMLInputElement;
+	namedItem(name: "denom"): HTMLInputElement;
+	"amount": HTMLInputElement;
+	namedItem(name: "amount"): HTMLInputElement;
+};
+export type CourtProposalCreatorMintCoinFormValues10 = {
+	"denom": string;
+	"amount": number;
 };
 interface HTMLFormElementKnownControls<C extends HTMLFormControlsCollection, V> extends HTMLFormElement {
 	readonly elements: C;

@@ -30,7 +30,7 @@ export function humanReadableTimeAmount(timeAmount: number, showMs: boolean = fa
 			return "0ms";
 		}
 		result = maybePrependIfNonZero(result, timeAmount % 1000, "ms");
-	} else if (timeAmount == 0) {
+	} else if (timeAmount < 1000) {
 		return "0s";
 	}
 	timeAmount = Math.floor(timeAmount / 1000);

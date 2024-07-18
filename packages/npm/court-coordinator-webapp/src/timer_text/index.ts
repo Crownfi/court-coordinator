@@ -4,29 +4,47 @@ import { TimerTextAutogen } from "./_autogen.js";
 export class TimerTextElement extends TimerTextAutogen {
 	#endTimestampAsNumber: number = NaN;
 	#callbackFunctions: Set<Function> = new Set();
-	timerInterval: ReturnType<typeof setInterval> | undefined
-	#renderTime() {
-		this.innerText = humanReadableTimeAmount(Date.now() - this.#endTimestampAsNumber);
-	}
-	connectedCallback() {
-		if (this.timerInterval != undefined) {
+	#timerInterval: ReturnType<typeof setInterval> | undefined
+	#think() {
+		const timeRemaining = this.#endTimestampAsNumber - Date.now();
+		if (timeRemaining > 0) {
+			this.innerText = humanReadableTimeAmount(timeRemaining);
 			return;
 		}
-		this.timerInterval = setInterval(() => {
-			this.#renderTime();
+		this.#stopInterval();
+		this.#callbackFunctions.forEach(func => {
+			func();
+		})
+	}
+	#startInterval() {
+		if (this.#timerInterval != undefined || isNaN(this.#endTimestampAsNumber)) {
+			return;
+		}
+		this.#timerInterval = setInterval(() => {
+			this.#think();
 		}, 990);
-		this.#renderTime();
+		this.#think();
+	}
+	#stopInterval() {
+		if (this.#timerInterval == undefined) {
+			return;
+		}
+		clearInterval(this.#timerInterval);
+		this.#timerInterval = undefined;
+	}
+	connectedCallback() {
+		this.#startInterval();
 	}
 	disconnectedCallback() {
-		clearInterval(this.timerInterval);
-		this.timerInterval = undefined;
+		this.#stopInterval();
 	}
 	protected onEndTimestampChanged(_: string | null, newValue: string | null) {
 		this.#endTimestampAsNumber = Number(newValue);
 		if (isNaN(this.#endTimestampAsNumber)) {
-			
+			this.innerText = "NaN";
+			this.#stopInterval();
 		}
-		this.connectedCallback(); // If the previous time has elapsed, we want to re-start the interval.
+		this.#startInterval(); // If the previous time has elapsed, we want to re-start the interval.
 	}
 	/**
 	 * If you want to know when the timer reaches 0, this is where to do it.

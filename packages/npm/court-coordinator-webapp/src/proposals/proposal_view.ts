@@ -1,6 +1,6 @@
-import { disableFormInputs, enableFormInputs, isElementInViewport } from "@aritz-cracker/browser-utils";
+import { disableFormInputs, enableFormInputs, isElementInViewport, qa } from "@aritz-cracker/browser-utils";
 import { CourtProposalAutogen, CourtProposalMsgEvmExecAutogen, CourtProposalMsgMintAutogen, CourtProposalMsgSendCoinAutogen, CourtProposalMsgWasmChAdminAutogen, CourtProposalMsgWasmClAdminAutogen, CourtProposalMsgWasmExecAutogen, CourtProposalMsgWasmUpgradeAutogen, CourtProposalPlaceholderAutogen, CourtProposalVoteDetailsAutogen } from "./_autogen.js";
-import { ClientEnv, UIAmount, bigIntToStringDecimal, getUserTokenInfo } from "@crownfi/sei-utils";
+import { ClientEnv, UIAmount, addUserTokenInfo, bigIntToStringDecimal, getUserTokenInfo, seiUtilEventEmitter } from "@crownfi/sei-utils";
 import { getCourtCoordinatorFromChainId, isProposalFinalized } from "@crownfi/court-coordinator-sdk";
 import "../timer_text/index.js";
 import isUtf8 from "is-utf8";
@@ -86,9 +86,9 @@ export class CourtProposalElement extends CourtProposalAutogen {
 
 	#isRefreshing: boolean = false;
 	#shouldRefresh: boolean = false;
-	refresh() {
+	refresh(evenIfFinalized: boolean = false) {
 		const thisProposalId = this.proposalIdAsNumber();
-		if (thisProposalId == undefined || this.proposalWasFinalized){
+		if (thisProposalId == undefined){
 			return;
 		}
 		this.#shouldRefresh = true;
@@ -99,13 +99,16 @@ export class CourtProposalElement extends CourtProposalAutogen {
 		this.inert = true;
 		this.classList.add("lazy-loading");
 		(async () => {
-			const client = await ClientEnv.get();
-			const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
 			do {
 				while (!isElementInViewport(this)) {
+					if (!this.isConnected) {
+						break;
+					}
 					// This is probably better as an intersection event but w/e
 					await new Promise(resolve => {setTimeout(resolve, 1000 + 2000 * Math.random())});
 				}
+				const client = await ClientEnv.get();
+				const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
 				this.#shouldRefresh = false;
 				const backgroundPromise = (async () => {
 					if (!this.isLatest) {
@@ -115,20 +118,25 @@ export class CourtProposalElement extends CourtProposalAutogen {
 						const newElement = new CourtProposalElement();
 						newElement.isLatest = true; // Even if it isn't, it will soon realize this.
 						newElement.proposalId = (thisProposalId + 1) + "";
-						this.parentElement?.insertBefore(this, newElement);
+						this.parentElement?.insertBefore(newElement, this);
 						this.isLatest = false;
 					}
 				})();
+				if (this.proposalWasFinalized && !evenIfFinalized) {
+					await backgroundPromise;
+					continue;
+				}
 				const [contractConfig, proposalInfo] = await Promise.all([
 					contract.queryConfig(),
 					contract.queryGetProposal({id: thisProposalId})
 				]);
 				if (proposalInfo == null) {
+					await backgroundPromise;
 					continue;
 				}
 				this.proposalWasFinalized = isProposalFinalized(proposalInfo.status);
-				const configIsRelevant = proposalInfo.status == "rejected_or_expired" ||
-					proposalInfo.status == "executed";
+				const configIsRelevant = proposalInfo.status != "rejected_or_expired" &&
+					proposalInfo.status != "executed";
 
 				const totalOpinionatedVotes = BigInt(proposalInfo.info.votes_for) +
 					BigInt(proposalInfo.info.votes_against);
@@ -143,7 +151,7 @@ export class CourtProposalElement extends CourtProposalAutogen {
 				let votesAgainstBps = BigInt(proposalInfo.info.votes_against) * 10000n / (
 					totalVotes
 				);
-				const votesBpsRemainder = (votesForBps + votesAbstainBps + votesAgainstBps) - 10000n;
+				const votesBpsRemainder = 10000n - (votesForBps + votesAbstainBps + votesAgainstBps);
 				if (votesAbstainBps > 0n) {
 					votesAbstainBps += votesBpsRemainder;
 				} else if (votesAgainstBps > 0n) {
@@ -176,18 +184,11 @@ export class CourtProposalElement extends CourtProposalAutogen {
 				
 				this.refs.votesTurnoutAmount.innerText = totalVotes + "";
 				this.refs.approvalRatingPercent.innerText = bigIntToStringDecimal(approvalRatingBps, 2);
+
 				// Clear modifiers
 				this.refs.voterTurnoutContainer.classList.value = "important-note";
 				this.refs.approvalRatingContainer.classList.value = "important-note";
 				if (configIsRelevant) {
-					this.refs.votesTurnoutNeededAmount.innerHTML = "";
-					votesTurnoutProgressElem.max = Number(totalVotes);
-					votesTurnoutProgressElem.classList.value = "";
-
-					this.refs.approvalRatingPercentNeeded.innerHTML = "";
-					approvalRatingProgressElem.classList.value = "";
-				} else {
-					
 					this.refs.votesTurnoutNeededAmount.innerText = minimumTotalVotes + "";
 					votesTurnoutProgressElem.max = Number(minimumTotalVotes);
 					if (totalVotes < minimumTotalVotes) {
@@ -199,10 +200,18 @@ export class CourtProposalElement extends CourtProposalAutogen {
 					}
 					approvalRatingProgressElem.max = contractConfig.minimum_vote_pass_percent * 100;
 					if (Number(approvalRatingBps) >= (contractConfig.minimum_vote_pass_percent * 100)) {
-						approvalRatingProgressElem.classList.value ="success";
+						approvalRatingProgressElem.classList.value = "success";
 					} else {
-						approvalRatingProgressElem.classList.value ="danger";
+						approvalRatingProgressElem.classList.value = "danger";
 					}
+					this.refs.approvalRatingPercentNeeded.innerText = contractConfig.minimum_vote_pass_percent + "";
+				} else {
+					this.refs.votesTurnoutNeededAmount.innerHTML = "";
+					votesTurnoutProgressElem.max = Number(totalVotes);
+					votesTurnoutProgressElem.classList.value = "";
+
+					this.refs.approvalRatingPercentNeeded.innerHTML = "";
+					approvalRatingProgressElem.classList.value = "";
 				}
 				
 				const votesTurnoutForElem = new HTMLProgressStackedFillElement();
@@ -210,22 +219,23 @@ export class CourtProposalElement extends CourtProposalAutogen {
 				votesTurnoutForElem.classList.add("success");
 				votesTurnoutProgressElem.appendChild(votesTurnoutForElem);
 				const votesTurnoutAgaintElem = new HTMLProgressStackedFillElement();
-				votesTurnoutAgaintElem.value = Number(proposalInfo.info.votes_abstain);
+				votesTurnoutAgaintElem.value = Number(proposalInfo.info.votes_against);
 				votesTurnoutAgaintElem.classList.add("danger");
 				votesTurnoutProgressElem.appendChild(votesTurnoutAgaintElem);
 				const votesTurnoutAbstainElem = new HTMLProgressStackedFillElement();
 				votesTurnoutAbstainElem.value = Number(proposalInfo.info.votes_abstain);
+				votesTurnoutAbstainElem.classList.add("primary");
 				votesTurnoutProgressElem.appendChild(votesTurnoutAbstainElem);
 
 				if (totalOpinionatedVotes > 0n) {
 					const votesRatingForElem = new HTMLProgressStackedFillElement();
 					votesRatingForElem.value = Number(approvalRatingBps);
 					votesRatingForElem.classList.add("success");
-					votesRatingForElem.appendChild(votesTurnoutForElem);
+					approvalRatingProgressElem.appendChild(votesRatingForElem);
 					const votesRatingAgaintElem = new HTMLProgressStackedFillElement();
 					votesRatingAgaintElem.value = 10000 - votesRatingForElem.value;
 					votesRatingAgaintElem.classList.add("danger");
-					approvalRatingProgressElem.appendChild(votesTurnoutAgaintElem);
+					approvalRatingProgressElem.appendChild(votesRatingAgaintElem);
 				}
 
 				this.refs.status.classList.value = "important-note"; // Clear modifier classes
@@ -263,11 +273,13 @@ export class CourtProposalElement extends CourtProposalAutogen {
 				}
 
 				this.refs.msgList.innerHTML = "";
+
 				for (let i = 0; i < proposalInfo.messages.length; i += 1) {
 					const proposalMsg = proposalInfo.messages[i];
 					if ("send_coin" in proposalMsg) {
 						const {send_coin: {amount, denom, to}} = proposalMsg;
 						const newElem = new CourtProposalMsgSendCoinElement();
+						await addUserTokenInfo(client.queryClient, client.chainId, denom);
 						newElem.coinAmount = amount;
 						newElem.denom = denom;
 						newElem.recipient = to;
@@ -359,11 +371,24 @@ export class CourtProposalElement extends CourtProposalAutogen {
 					this.refs.userProposalVotes.innerText = userVoteInfo.active_votes;
 					if (userVoteInfo.active_votes == "0") {
 						this.refs.userVoteForm.elements.vote.value = "";
+						this.refs.userVoteForm.elements.vote.forEach((elem) => {
+							(elem as HTMLInputElement).checked = false;
+						});
 					} else {
 						this.refs.userVoteForm.elements.vote.value = userVoteInfo.vote;
 					}
-					enableFormInputs(this.refs.userVoteForm);
+					this.refs.userTotalVotes.innerText = userStats.staked_votes;
+					if (proposalInfo.status == "pending") {
+						enableFormInputs(this.refs.userVoteForm);
+					} else {
+						disableFormInputs(this.refs.userVoteForm);
+					}
 				} else {
+					this.refs.userVoteForm.elements.vote.value = "";
+					this.refs.userVoteForm.elements.vote.forEach((elem) => {
+						(elem as HTMLInputElement).checked = false;
+					});
+					this.refs.userProposalVotes.innerHTML = "";
 					this.refs.userTotalVotes.innerHTML = "";
 					disableFormInputs(this.refs.userVoteForm);
 				}
@@ -398,7 +423,16 @@ export class CourtProposalElement extends CourtProposalAutogen {
 	}
 }
 CourtProposalElement.registerElement();
-
+seiUtilEventEmitter.on("defaultNetworkChanged", (ev) => {
+	(qa("[is=\"court-proposal\"]") as NodeListOf<CourtProposalElement>).forEach(elem => {
+		elem.refresh(true);
+	});
+});
+seiUtilEventEmitter.on("defaultProviderChanged", (ev) => {
+	(qa("[is=\"court-proposal\"]") as NodeListOf<CourtProposalElement>).forEach(elem => {
+		elem.refresh(true);
+	});
+});
 
 export class CourtProposalPlaceholderElement extends CourtProposalPlaceholderAutogen {
 	viewportObserver: IntersectionObserver;
@@ -429,13 +463,13 @@ export class CourtProposalPlaceholderElement extends CourtProposalPlaceholderAut
 				}
 				this.lastProposalCreated -= 1;
 				// we could have just deployed the contract
-				if (this.lastProposalCreated > 0) {
+				if (this.lastProposalCreated >= 0) {
 					const newElement = new CourtProposalElement();
 					newElement.isLatest = isLatest;
 					newElement.proposalId = this.lastProposalCreated + "";
-					this.parentElement?.insertBefore(this, newElement);
+					this.parentElement?.insertBefore(newElement, this);
 				}
-				if (this.lastProposalCreated <= 0) {
+				if (this.lastProposalCreated < 0) {
 					this.viewportObserver.disconnect();
 					this.remove();
 					break;
@@ -443,6 +477,8 @@ export class CourtProposalPlaceholderElement extends CourtProposalPlaceholderAut
 				await new Promise(resolve => {setTimeout(resolve, 100)});
 			}while(isElementInViewport(this))
 		})().catch(ex => {
+			this.classList.add("danger");
+			errorMsgBox(ex);
 			console.error(ex);
 		}).finally(() => {
 			this.#isAddingNewStuff = false;
@@ -469,11 +505,10 @@ export class CourtProposalMsgSendCoinElement extends CourtProposalMsgSendCoinAut
 		this.refreshDenom();
 	}
 	protected onRecipientChanged(_: string | null, newValue: string | null) {
-		this.refs.recipient.innerText = newValue = "";
+		this.refs.recipient.innerText = newValue + "";
 	}
 }
 CourtProposalMsgSendCoinElement.registerElement();
-
 
 export class CourtProposalMsgEvmExecElement extends CourtProposalMsgEvmExecAutogen {
 	protected onContractChanged(_: string | null, newValue: string | null) {
@@ -600,11 +635,18 @@ export class CourtProposalVoteDetailsElement extends CourtProposalVoteDetailsAut
 	static showProposalModal(proposalId: number) {
 		const elem = new CourtProposalVoteDetailsElement();
 		elem.proposalId = proposalId + "";
-		document.appendChild(elem);
+		document.body.appendChild(elem);
 		elem.addEventListener("close", _ => {
 			elem.remove();
 		});
 		elem.showModal();
+	}
+	constructor() {
+		super();
+		this.refs.closeButton.addEventListener("click", (ev) => {
+			ev.preventDefault();
+			this.close();
+		});
 	}
 	protected onProposalIdChanged(_: string | null, newValue: string | null): void {
 		this.refs.proposalId.innerText = newValue + "";
@@ -628,6 +670,11 @@ export class CourtProposalVoteDetailsElement extends CourtProposalVoteDetailsAut
 			try {
 				const client = await ClientEnv.get();
 				const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
+				const proposer = (await contract.queryGetProposal({id: proposalId}))?.info.proposer;
+				if (!proposer) {
+					this.close();
+					return;
+				}
 				let userVotes = [];
 				do {
 					userVotes = await contract.queryGetProposalUserVotes({
@@ -647,7 +694,6 @@ export class CourtProposalVoteDetailsElement extends CourtProposalVoteDetailsAut
 						listItem.appendChild(listItemInner);
 						listItemInner.innerText = userVote.user + " - " + userVote.info.active_votes + " ";
 						const listItemIcon = document.createElement("span");
-						listItemInner.appendChild(listItemIcon);
 						listItemIcon.classList.value = "cicon cicon-size-small";
 						switch (userVote.info.vote) {
 							case "abstain":
@@ -665,10 +711,21 @@ export class CourtProposalVoteDetailsElement extends CourtProposalVoteDetailsAut
 							default:
 								break;
 						}
+						listItemInner.appendChild(listItemIcon);
+						if (userVote.user == proposer) {
+							const proposerIcon = document.createElement("span");
+							proposerIcon.classList.value = "cicon cicon-size-small cicon-gradient primary cicon-edit";
+							listItemInner.appendChild(proposerIcon);
+							this.refs.voteList.prepend(listItem);
+						} else {
+							this.refs.voteList.insertBefore(listItem, placeholderListItem);
+						}
+						//this.refs.voteList.prepend
+						
 						this.#after = userVote.user;
 					}
-					
 				}while(userVotes.length);
+				placeholderListItem.remove();
 			} finally {
 				this.#isRefreshing = false;
 				if (this.refs.voteList.childElementCount == 0) {
@@ -679,3 +736,4 @@ export class CourtProposalVoteDetailsElement extends CourtProposalVoteDetailsAut
 		});
 	}
 }
+CourtProposalVoteDetailsElement.registerElement();

@@ -4,9 +4,8 @@ import { QueryClient } from "@cosmjs/stargate";
 export * from "./base/index.js";
 
 const knownContractAddresses: {[chainId: string]: string} = {};
-export function getCourtCoordinatorFromChainId<Q extends QueryClient & WasmExtension>(
-	queryClient: Q, chainId: string
-) {
+
+export function getCourtCoordinatorAddressFromChainId(chainId: string): string {
 	let contractAddress = knownContractAddresses[chainId];
 	if (!contractAddress && typeof localStorage !== "undefined") {
 		contractAddress = localStorage.getItem("@crownfi/court-coordinator-sdk/contract_address/" + chainId) || "";
@@ -22,9 +21,15 @@ export function getCourtCoordinatorFromChainId<Q extends QueryClient & WasmExten
 	if (!contractAddress) {
 		throw new Error("There's no default CourtCoordinator contract address for " + chainId);
 	}
+	return contractAddress;
+}
+
+export function getCourtCoordinatorFromChainId<Q extends QueryClient & WasmExtension>(
+	queryClient: Q, chainId: string
+) {
 	return new CourtCoordinatorContract(
 		queryClient,
-		contractAddress
+		getCourtCoordinatorAddressFromChainId(chainId)
 	);
 }
 

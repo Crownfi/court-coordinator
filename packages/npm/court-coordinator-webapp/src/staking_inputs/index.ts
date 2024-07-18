@@ -14,6 +14,7 @@ export class StakingInputsElement extends StakingInputsAutogen {
 			ev.preventDefault();
 			if (!this.refs.formStake.elements.amount.value) {
 				this.refs.formStake.elements.amount.value = "0";
+				this.refs.formStake.elements.amount.required = true;
 				this.refs.formStake.reportValidity();
 				return;
 			}

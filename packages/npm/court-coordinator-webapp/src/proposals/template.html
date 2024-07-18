@@ -1,12 +1,14 @@
 <template cewt-name="court-proposals-container" cewt-extends="div">
 	<button cewt-ref="new-proposal-button" style="display: block; margin: auto;" class="primary">New proposal</button>
+	<div is="court-proposal-placeholder"></div>
 </template>
 <template cewt-name="court-proposal" cewt-extends="div" cewt-attributes="proposal-id">
 	<h2>Proposal&nbsp;<span cewt-ref="proposal-id">??</span></h2>
 	<div class="important-note" cewt-ref="status">
 		Unknown status
 	</div>
-	<div style="display: flex; justify-content: stretch; align-items:stretch; flex-wrap: wrap;">
+	<hr class="pattern-stretch">
+	<div class="votes-breakdown">
 		<div class="important-note success">
 			<span cewt-ref="votes-approve-amount">0</span> approval votes (<span cewt-ref="votes-approve-percent">0</span>%)
 		</div>
@@ -32,18 +34,20 @@
 
 	</progress-stacked>
 	<button cewt-ref="voter-details-button" style="display: block; margin: auto;" class="small">Voter details</button>
+	<hr class="pattern-stretch">
 	<ol start="0" class="vote-msgs" cewt-ref="msg-list">
 
 	</ol>
-	<div class="important-note">
+	<hr class="pattern-stretch">
+	<div class="important-note hide-if-refs-empty">
 		You've used <span cewt-ref="user-proposal-votes">0</span><span class="hide-if-refs-empty">/<span cewt-ref="user-total-votes">0</span></span> of your votes
 	</div>
-	<form cewt-ref="user-vote-form" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-		<label class="button success">Approve<input name="vote" type="radio" value="approve"></label>
-		<label class="button danger">Oppose<input name="vote" type="radio" value="oppose"></label>
-		<label class="button warning">Abstain<input name="vote" type="radio" value="abstain"></label>
+	<form cewt-ref="user-vote-form" class="fantasy-input-group">
+		<label class="button fantasy success"><span>Approve</span><input name="vote" type="radio" value="approve"></label>
+		<label class="button fantasy danger"><span>Oppose</span><input name="vote" type="radio" value="oppose"></label>
+		<label class="button fantasy warning"><span>Abstain</span><input name="vote" type="radio" value="abstain"></label>
 	</form>
-	<button class="primary vote-finalize-button" cewt-ref="execute-button">Execute proposal</button>
+	<button class="primary fantasy-ornamental vote-finalize-button" cewt-ref="execute-button">Execute proposal</button>
 </template>
 
 <template cewt-name="court-proposal-msg-send-coin" cewt-extends="li" cewt-attributes="denom, coin-amount, recipient">
@@ -82,7 +86,8 @@
 	<div class="important-note">
 		Unknown status
 	</div>
-	<div style="display: flex; justify-content: stretch; align-items:stretch; flex-wrap: wrap;">
+	<hr>
+	<div class="votes-breakdown">
 		<div class="important-note success">
 			?? approval votes (??%)
 		</div>
@@ -104,13 +109,14 @@
 	</div>
 	<progress-stacked style="width: 100%;"></progress-stacked>
 	<button style="display: block; margin: auto;" class="small">Voter details</button>
+	<hr>
 	<ol start="0" class="vote-msgs">
 		<li>Wait for the proposal to load</li>
 	</ol>
 	<div class="important-note">
 		You've used ????/???? of your votes
 	</div>
-	<form style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+	<form style="display: flex; justify-content: space-around; align-items: center; flex-wrap: wrap;">
 		<label class="button success">Approve<input name="vote" type="radio" value="approve"></label>
 		<label class="button danger">Oppose<input name="vote" type="radio" value="oppose"></label>
 		<label class="button warning">Abstain<input name="vote" type="radio" value="abstain"></label>
@@ -121,5 +127,212 @@
 <template cewt-name="court-proposal-vote-details" cewt-extends="dialog" cewt-attributes="proposal-id">
 	<h1>Votes for proposal <span cewt-ref="proposal-id">#</span></h1>
 	<ul cewt-ref="vote-list"></ul>
-	<button style="display: block; margin: auto;" class="small">Close</button>
+	<button style="display: block; margin: auto;" cewt-ref="close-button" class="small">Close</button>
+</template>
+
+<template cewt-name="court-proposal-creator" cewt-extends="dialog">
+	<h1>Create new proposal</h1>
+	<label>
+		<span>Voting time<span class="hide-if-refs-empty"> (maximum is <span cewt-ref="max-expiry"></span>)</span></span>
+		<input
+			cewt-ref="expiry"
+			name="expiry"
+			type="text"
+			placeholder=""
+			title="Enter duration (e.g., 5w4d3h2m1s for 5 weeks, 4 days, 3 hours, 2 minutes, 1 second)."
+			pattern="^\s*(\d+w)?\s*(\d+d)?\s*(\d+h)?\s*(\d+m)?\s*(\d+s)?\s*(\d+ms)?\s*$"
+		>
+	</label>
+	<p>Instructions will be executed in the order specified. If any fail, the entire transaction will fail.</p>
+	<div cewt-ref="instruction-container">
+
+	</div>
+	<button class="small" style="display: block; margin: 4px auto">Add instruction</button>
+	<dropdown-menu click-trigger="primary" linked-elements="*:has(+ #this)">
+		<dropdown-menu-item value="send_coin">Send coin (Native, ERC20, or CW20)</dropdown-menu-item>
+		<dropdown-menu-item value="execute_evm">EVM instruction</dropdown-menu-item>
+		<dropdown-menu-item value="execute_wasm">CosmWasm instruction</dropdown-menu-item>
+		<dropdown-menu-item value="upgrade_wasm_contract">Upgrade CosmWasm contract</dropdown-menu-item>
+		<dropdown-menu-item value="change_wasm_contract_admin">Change CosmWasm contract admin</dropdown-menu-item>
+		<dropdown-menu-item value="clear_wasm_contract_admin">Clear CosmWasm contract admin</dropdown-menu-item>
+		<dropdown-menu-item value="tokenfactory_mint">Mint coins</dropdown-menu-item>
+	</dropdown-menu>
+
+	<div class="button-row equal-width">
+		<button class="primary small" cewt-ref="execute-button">Propose</button>
+		<button class="small" cewt-ref="cancel-button">Cancel</button>
+	</div>
+</template>
+
+<template cewt-name="court-proposal-creator-send-coin" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>Send coin</h5>
+		<label>
+			<span>Recipient</span>
+			<input name="recipient" type="text" title="A valid 0x or sei1 address" pattern="^(0x[a-fA-F0-9]{40}|sei1(?:[a-z0-9]{38}|[a-z0-9]{58}))$" placeholder="sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5">
+		</label>
+		<label>
+			<span>Denom (native tokens should have their base unit entered as is, ERC20 tokens should be prepended with "erc20/", and sei1 tokens should be prepended with "cw20/")</span>
+			<input name="denom" type="text" title="A token base unit" placeholder="usei">
+		</label>
+		<label>
+			<span>Amount (no decimals)</span>
+			<input min="1" step="1" placeholder="0" name="amount" type="number">
+		</label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-execute-evm" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>EVM Instruction</h5>
+		<label>
+			<span>Recipient</span>
+			<input name="recipient" type="text" title="A valid 0x address" pattern="^0x[a-fA-F0-9]{40}$" placeholder="0x0000000000000000000000000000000000000000">
+		</label>
+		<label>
+			<span>aSEI (not uSEI, 1000000000000 aSEI = 1 uSEI, kind of like "wei")</span>
+			<input min="0" step="1" placeholder="0" name="amount" type="number">
+		</label>
+		<label>
+			<span>Instruction data (Base64 or hex-encoded)</span>
+			<textarea name="data"></textarea>
+		</label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-execute-wasm" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>CosmWasm Instruction</h5>
+		<label>
+			<span>Contract</span>
+			<input name="recipient" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
+		</label>
+		<label>
+			<span>Instruction data</span>
+			<textarea name="data"></textarea>
+		</label>
+		<label><input type="radio" name="data_type" checked value="json"><span>JSON (used by most contracts)</span></label>
+		<!-- <label><input type="radio" name="data_type" value="printable"><span>Printable non-JSON</span></label> -->
+		<label><input type="radio" name="data_type" value="base64"><span>Base64</span></label>
+		<div cewt-ref="coins-container">
+		</div>
+		<button class="small" cewt-ref="add-coins-button" style="display: block; margin: auto">Add coin</button>
+	</form>
+</template>
+<template cewt-name="court-proposal-creator-execute-wasm-coin" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<label>
+			<span>Denom (native tokens should have their base unit entered as is, ERC20 tokens should be prepended with "erc20/", and sei1 tokens should be prepended with "cw20/")</span>
+			<input name="denom" type="text" title="A token base unit" placeholder="usei">
+		</label>
+		<label>
+			<span>Amount (no decimals)</span>
+			<input min="1" step="1" required placeholder="0" name="amount" type="number">
+		</label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-dao-admin" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>DAO admin</h5>
+		<label>
+			<span>New admin</span>
+			<input name="admin" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5">
+		</label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-upgrade-wasm" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>Upgrade CosmWasm contract</h5>
+		<label>
+			<span>Contract</span>
+			<input name="recipient" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
+		</label>
+		<label>
+			<span>New Code ID (required)</span>
+			<input min="1" step="1" placeholder="0" name="amount" type="number">
+		</label>
+		<label>
+			<span>Instruction data</span>
+			<textarea name="data"></textarea>
+		</label>
+		<label><input type="radio" name="data_type" value="json"><span>JSON (used by most contracts)</span></label>
+		<label><input type="radio" name="data_type" value="printable"><span>Printable non-JSON</span></label>
+		<label><input type="radio" name="data_type" value="base64"><span>Base64-encoded</span></label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-change-wasm-admin" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>Change CosmWasm contract admin</h5>
+		<label>
+			<span>Contract (required)</span>
+			<input name="recipient" type="text" title="A valid sei1 address" required pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
+		</label>
+		<label>
+			<span>New admin (required)</span>
+			<input name="admin" type="text" title="A valid sei1 address" required pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5">
+		</label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-clear-wasm-admin" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>Clear CosmWasm contract admin</h5>
+		<label>
+			<span>Contract (required)</span>
+			<input name="recipient" type="text" title="A valid sei1 address" required pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
+		</label>
+	</form>
+</template>
+
+<template cewt-name="court-proposal-creator-mint-coin" cewt-extends="div">
+	<div class="drag-handle"></div>
+	<button cewt-ref="delete-button" class="danger short delete-button" aria-label="delete">
+		<i class="cicon cicon-size-xsmall cicon-trash cicon-gradient"></i>
+	</button>
+	<form cewt-ref="form">
+		<h5>Mint coin</h5>
+		<label>
+			<span>Denom (required) - Tokenfactory token base unit</span>
+			<input name="denom" type="text" title="A token base unit" required>
+		</label>
+		<label>
+			<span>Amount (required, no decimals)</span>
+			<input min="1" step="1" required placeholder="0" name="amount" type="number">
+		</label>
+	</form>
 </template>

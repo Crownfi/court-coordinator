@@ -1,0 +1,120 @@
+[is="court-proposals-container"] {
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 850px;
+	box-sizing: border-box;
+
+	.votes-breakdown {
+		display: flex;
+		justify-content: stretch;
+		align-items:stretch;
+		flex-wrap: wrap;
+		gap: 2px;
+
+		> div {
+			flex-grow: 1;
+		}
+	}
+	[cewt-ref="user-vote-form"] {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 2px;
+	}
+}
+.vote-finalize-button {
+	display: flex;
+	margin: 4px auto;
+}
+
+*:has(> .draggable-with-handle) {
+	background-color: var(--colour-primary-900);
+	border: 1px solid #3c3e4a;
+	padding: 1px;
+}
+
+.draggable-with-handle {
+	background: var(--background-container);
+	border: 1px solid #3c3e4a;
+	border-radius: 0px;
+	padding: 16px;
+
+	display: flex;
+	flex-direction: row;
+	position: relative;
+	.delete-button {
+		padding: 2px;
+		position: absolute;
+		aspect-ratio: 1/1;
+		right: 0;
+		top: 0;
+	}
+}
+.draggable-with-handle > form {
+	flex-grow: 1;
+}
+.draggable-with-handle > .drag-handle {
+	margin: -16px;
+	margin-right: 2px;
+}
+.drag-handle {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	align-items: center;
+	content: "";
+	width: 18px;
+	align-self: stretch;
+	justify-self: stretch;
+	opacity: 0.7;
+	transition: opacity 0.25s ease-in-out;
+
+	border-radius: 2px;
+	border: 1px solid transparent;
+	background:
+		var(--linear-gradient-active-background) padding-box,
+		/* Only the bottom layer can be a solid colour, so we're doing this lol */
+		linear-gradient(var(--colour-primary-900), var(--colour-primary-900)) padding-box,
+		var(--linear-gradient-active) border-box;
+	
+	cursor: grab;
+
+	font-family: "crowndings";
+	font-synthesis: none;
+	text-transform: none;
+	line-height: 1;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	color: var(--colour-secondary-700);
+	font-size: 16px;
+}
+.drag-handle::before {
+	content: "\e010";
+	transition: opacity 0.15s ease-in-out;
+	opacity: 0.2;
+}
+.drag-handle::after {
+	content: "\e00d";
+	transition: opacity 0.15s ease-in-out;
+	opacity: 0.2;
+}
+.drag-handle:hover::before, .drag-handle:hover::after,
+.drag-handle:active::before, .drag-handle:active::after,
+.drag-handle:hover, .drag-handle:active,
+.draggable-placeholder .drag-handle,
+.draggable-placeholder .drag-handle::before,
+.draggable-placeholder .drag-handle::after {
+	opacity: 1;
+}
+
+.draggable-placeholder {
+	filter: grayscale(0.5);
+	opacity: 0.8;
+}
+.drag-handle:active {
+	cursor: grabbing;
+}
+[is="court-proposal-creator"] textarea {
+	resize: vertical;
+}

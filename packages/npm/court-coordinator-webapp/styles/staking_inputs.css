@@ -4,21 +4,22 @@
 	margin-bottom: 8px;
 	margin-left: auto;
 	margin-right: auto;
-}
-[is="staking-inputs"] > form {
-	display: flex;
-	flex-direction: column;
-	align-items: stretch;
-}
-[is="staking-inputs"] .trade-amount-balance {
-	margin-top: 8px;
-	margin-bottom: 8px;
-}
-[is="staking-inputs"] button.trade-execute {
-	display: block;
-	margin-left: auto;
-	margin-right: auto;
-}
-[is="staking-inputs"] button {
-	min-width: 96px;
+
+	> form {
+		display: flex;
+		flex-direction: column;
+		align-items: stretch;
+	}
+	.trade-amount-balance {
+		margin-top: 8px;
+		margin-bottom: 8px;
+	}
+	button {
+		min-width: 96px;
+	}	
+	button.trade-execute {
+		display: block;
+		margin-left: auto;
+		margin-right: auto;
+	}
 }
