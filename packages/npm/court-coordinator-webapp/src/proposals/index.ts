@@ -1,11 +1,11 @@
-import { alert, FullscreenLoadingTask, msgBoxIfThrow } from "@crownfi/css-gothic-fantasy";
+import { alert, FullscreenLoadingTask, msgBoxIfThrow, prompt } from "@crownfi/css-gothic-fantasy";
 import { CourtProposalsContainerAutogen } from "./_autogen.js";
 import { ClientEnv, seiUtilEventEmitter } from "@crownfi/sei-utils";
 import { getCourtCoordinatorFromChainId } from "@crownfi/court-coordinator-sdk";
 import { NotEnoughStakedVotesForProposalError } from "../error.js";
 import { qa } from "@aritz-cracker/browser-utils";
 import { CourtProposalCreatorElement } from "./proposal_create.js";
-import Sortable from "sortablejs";
+import { CourtProposalElement } from "./proposal_view.js";
 
 export * from "./proposal_view.js";
 export * from "./proposal_create.js";
@@ -13,7 +13,7 @@ export * from "./proposal_create.js";
 export class CourtProposalsContainerElement extends CourtProposalsContainerAutogen {
 	constructor() {
 		super();
-		this.refs.newProposalButton.addEventListener("click", (_) => {
+		this.refs.newProposalButton.addEventListener("click", () => {
 			msgBoxIfThrow(async () => {
 				const task = new FullscreenLoadingTask();
 				try {
@@ -41,6 +41,23 @@ export class CourtProposalsContainerElement extends CourtProposalsContainerAutog
 					task.hide();
 				}
 			})
+		});
+		this.refs.proposalSelectButton.addEventListener("click", () => {
+			msgBoxIfThrow(async () => {
+				const proposalId = await prompt("View proposal", "Enter proposal ID", "", "search");
+				if (!proposalId) {
+					return;
+				}
+				this.querySelectorAll("[is=\"court-proposal-placeholder\"]").forEach(elem => {
+					elem.remove();
+				});
+				this.querySelectorAll("[is=\"court-proposal\"]").forEach(elem => {
+					elem.remove();
+				});
+				const newElement = new CourtProposalElement();
+				newElement.proposalId = proposalId + "";
+				this.append(newElement);
+			});
 		});
 	}
 

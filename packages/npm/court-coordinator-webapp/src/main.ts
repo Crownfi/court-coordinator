@@ -1,4 +1,5 @@
 import "@crownfi/sei-webui-utils";
+import "dropdown-menu-element";
 import { q } from "@aritz-cracker/browser-utils";
 // import { RewardsTableElement } from "./rewards_table/index.js";
 import { StakingInputsElement } from "./staking_inputs/index.js";

@@ -1,5 +1,5 @@
 import { alert, confirm, FullscreenLoadingTask, msgBoxIfThrow } from "@crownfi/css-gothic-fantasy";
-import { CourtProposalCreatorAutogen, CourtProposalCreatorDaoAdminAutogen, CourtProposalCreatorExecuteEvmAutogen, CourtProposalCreatorExecuteWasmAutogen, CourtProposalCreatorExecuteWasmCoinAutogen, CourtProposalCreatorSendCoinAutogen } from "./_autogen.js";
+import { CourtProposalCreatorAutogen, CourtProposalCreatorChangeWasmAdminAutogen, CourtProposalCreatorClearWasmAdminAutogen, CourtProposalCreatorDaoAdminAutogen, CourtProposalCreatorExecuteEvmAutogen, CourtProposalCreatorExecuteWasmAutogen, CourtProposalCreatorExecuteWasmCoinAutogen, CourtProposalCreatorMintCoinAutogen, CourtProposalCreatorSendCoinAutogen, CourtProposalCreatorUpgradeWasmAutogen } from "./_autogen.js";
 import { preventDefault, q, qa } from "@aritz-cracker/browser-utils";
 import Sortable from "sortablejs";
 import { WebClientEnv } from "@crownfi/sei-webui-utils";
@@ -8,6 +8,7 @@ import { CourtProposalElement } from "./proposal_view.js";
 import { ClientEnv, getDefaultNetworkConfig, isValidEvmAddress, nativeDenomSortCompare, seiUtilEventEmitter } from "@crownfi/sei-utils";
 import { humanReadableTimeAmount, parseTimeAmount } from "../time_format.js";
 import { Coin } from "@cosmjs/proto-signing";
+import { DropdownMenuItemElement } from "dropdown-menu-element";
 
 export class CourtProposalCreatorElement extends CourtProposalCreatorAutogen {
 	static showModalAndDoTransaction() {
@@ -53,20 +54,29 @@ export class CourtProposalCreatorElement extends CourtProposalCreatorAutogen {
 					);
 					break;
 				case "upgrade_wasm_contract":
-					alert("TODO: handle upgrade_wasm_contract");
+					this.refs.instructionContainer.appendChild(
+						new CourtProposalCreatorUpgradeWasmElement()
+					);
 					break;
 				case "change_wasm_contract_admin":
-					alert("TODO: handle change_wasm_contract_admin");
+					this.refs.instructionContainer.appendChild(
+						new CourtProposalCreatorChangeWasmAdminElement()
+					);
 					break;
 				case "clear_wasm_contract_admin":
-					alert("TODO: handle clear_wasm_contract_admin");
+					this.refs.instructionContainer.appendChild(
+						new CourtProposalCreatorClearWasmAdminElement()
+					);
 					break;
 				case "tokenfactory_mint":
-					alert("TODO: handle tokenfactory_mint");
+					this.refs.instructionContainer.appendChild(
+						new CourtProposalCreatorMintCoinElement()
+					);
 					break;
 				default:
 					alert("Unknown option value " + ev.detail.selectedValue);
 			}
+			this.refs.executeButton.disabled = false;
 		});
 	}
 	proposeTransactionMsgs(): ProposedCourtMsgJsonable[] | null {
@@ -122,9 +132,10 @@ export class CourtProposalCreatorElement extends CourtProposalCreatorAutogen {
 			"Keep",
 			"Reset"
 		)) {
-			this.refs.instructionContainer.innerHTML = "";
+			this.reset();
+		}
+		if (this.refs.instructionContainer.childElementCount == 0) {
 			this.refs.executeButton.disabled = true;
-			this.refs.expiry.value = "";
 		}
 		return new Promise(resolve => {
 			const executeClickCallback = (_: Event) => {
@@ -185,10 +196,11 @@ export class CourtProposalCreatorElement extends CourtProposalCreatorAutogen {
 				const config = await contract.queryConfig();
 				this.refs.expiry.placeholder = humanReadableTimeAmount(config.max_proposal_expiry_time_seconds * 1000);
 				this.refs.maxExpiry.innerText = this.refs.expiry.placeholder;
+				(this.refs.menuItemDaoAdmin as DropdownMenuItemElement).disabled = config.admin != contract.address;
 			}while(this.#shouldRefreshConfig);
 		})().catch(ex => {
 			this.refs.maxExpiry.innerText = "";
-			console.error("Could not show the user the max proposal time", ex);
+			console.error("Could not get config options", ex);
 		}).finally(() => {
 			this.refs.maxExpiry.classList.remove("loading-spinner-inline");
 			this.#isRefreshingConfig = false;
@@ -218,7 +230,15 @@ seiUtilEventEmitter.on("defaultProviderChanged", (ev) => {
 	});
 });
 
-type CourtProposalMessageCreator = CourtProposalCreatorSendCoinElement | CourtProposalCreatorExecuteEvmElement;
+type CourtProposalMessageCreator =
+	CourtProposalCreatorSendCoinElement |
+	CourtProposalCreatorExecuteEvmElement |
+	CourtProposalCreatorExecuteWasmElement |
+	CourtProposalCreatorDaoAdminElement |
+	CourtProposalCreatorUpgradeWasmElement |
+	CourtProposalCreatorChangeWasmAdminElement |
+	CourtProposalCreatorClearWasmAdminElement |
+	CourtProposalCreatorMintCoinElement;
 
 export class CourtProposalCreatorSendCoinElement extends CourtProposalCreatorSendCoinAutogen {
 	constructor() {
@@ -256,6 +276,103 @@ export class CourtProposalCreatorSendCoinElement extends CourtProposalCreatorSen
 }
 CourtProposalCreatorSendCoinElement.registerElement();
 
+function isDataInputValid(
+	dataInput: HTMLInputElement | HTMLTextAreaElement,
+	dataTypeSelector: RadioNodeList | HTMLSelectElement
+) {
+	switch (dataTypeSelector.value) {
+		case "json":
+			try {
+				JSON.parse(dataInput.value);
+				return true;
+			}catch(ex: any) {
+				return false;
+			}
+		case "utf8":
+			// Values in text inputs should always be printable
+			return true;
+		case "hex":
+			return /^(?:0x)?(?:[0-9a-fA-F]{2})*$/.test(
+				dataInput.value.replace(/\s/, "")
+			);
+		case "base64":
+			return /^(?:(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=?|[A-Za-z0-9+\/]{2}={0,2}?|[A-Za-z0-9+\/]={0,3}?))?$/.test(
+				dataInput.value.replace(/\s/, "")
+			);
+		default:
+			return false;
+	}
+}
+
+/**
+ * Don't count on this for input validation
+ */
+function dataInputToBase64String (
+	dataInput: HTMLInputElement | HTMLTextAreaElement,
+	dataTypeSelector: RadioNodeList | HTMLSelectElement
+): string {
+	let dataInputStr = dataInput.value;
+	switch (dataTypeSelector.value) {
+		case "json":
+			try {
+				return Buffer.from(JSON.stringify(JSON.parse(dataInputStr)), "utf8").toString("base64");
+			}catch(ex: any) {
+				return "";
+			}
+		case "printable":
+			return Buffer.from(dataInputStr, "utf8").toString("base64");
+		case "hex": {
+			dataInputStr = dataInputStr.replace(/\s/, "");
+			if (dataInputStr.startsWith("0x")) {
+				dataInputStr = dataInputStr.substring(2);
+			}
+			return Buffer.from(dataInputStr, "hex").toString("base64");
+		}
+		case "base64":
+			dataInputStr = dataInputStr.replace(/\s/, "");
+			if (
+				!/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=?|[A-Za-z0-9+\/]{2}={0,2}?|[A-Za-z0-9+\/]={0,3}?)$/.test(dataInputStr)
+			) {
+				return "";
+			}
+			return dataInputStr;
+		default:
+			return "";
+	}
+}
+function addContractPayloadValidation(
+	dataInput: HTMLInputElement | HTMLTextAreaElement,
+	dataTypeSelector: RadioNodeList | HTMLSelectElement
+) {
+	// The validation check functions are rather expensive, so would rather "lazily" implement them
+	function inputEventCallback() {
+		if (isDataInputValid(dataInput, dataTypeSelector)) {
+			dataInput.classList.remove("invalid-input");
+			dataInput.removeEventListener("input", inputEventCallback);
+		}
+	}
+	function changeEventCallback() {
+		if (isDataInputValid(dataInput, dataTypeSelector)) {
+			dataInput.classList.remove("invalid-input");
+		} else if (!dataInput.classList.contains("invalid-input")) {
+			dataInput.classList.add("invalid-input");
+			dataInput.addEventListener("input", inputEventCallback);
+		}
+	}
+	dataInput.addEventListener("change", changeEventCallback);
+	if (dataTypeSelector instanceof RadioNodeList) {
+		dataTypeSelector.forEach(elem => {
+			elem.addEventListener("change", changeEventCallback);
+		});
+	} else {
+		dataTypeSelector.addEventListener("change", changeEventCallback);
+	}
+	if (!isDataInputValid(dataInput, dataTypeSelector)) {
+		dataInput.classList.add("invalid-input");
+		dataInput.addEventListener("input", inputEventCallback);
+	}
+}
+
 export class CourtProposalCreatorExecuteEvmElement extends CourtProposalCreatorExecuteEvmAutogen {
 	constructor() {
 		super();
@@ -263,6 +380,10 @@ export class CourtProposalCreatorExecuteEvmElement extends CourtProposalCreatorE
 		this.refs.deleteButton.addEventListener("click", (ev) => {
 			this.remove();
 		});
+		addContractPayloadValidation(
+			this.refs.form.elements.data,
+			this.refs.form.elements.data_type
+		);
 	}
 	proposeTransactionMsg(): Extract<ProposedCourtMsgJsonable, {execute_evm_contract: any}> | null {
 		if (!this.refs.form.elements.recipient.value) {
@@ -272,36 +393,38 @@ export class CourtProposalCreatorExecuteEvmElement extends CourtProposalCreatorE
 			this.refs.form.elements.amount.value = "0";
 			this.refs.form.elements.amount.required = true;
 		}
+		if (!this.refs.form.elements.data_type.value) {
+			this.refs.form.elements.data_type.forEach((elem) => {
+				(elem as HTMLInputElement).required = true;
+			})
+		}
 		if (!this.refs.form.reportValidity()) {
+			return null;
+		}
+		if (this.refs.form.elements.data.classList.contains("invalid-input")) {
+			this.refs.form.elements.data.scrollTo({behavior: "smooth"});
+			this.refs.form.elements.data.focus();
 			return null;
 		}
 		const contract = this.refs.form.elements.recipient.value;
 		const value = this.refs.form.elements.amount.value;
 		if (!isValidEvmAddress(this.refs.form.elements.recipient.value, true)) {
+			this.refs.form.elements.recipient.scrollTo({behavior: "smooth"});
+			this.refs.form.elements.recipient.focus();
 			alert(
 				this.refs.form.elements.recipient.value +
 				" does not have the proper capitalization.\nPlease check the address and try again."
 			);
 			return null;
 		}
-		let msg = this.refs.form.elements.data.value.replace(/\s/, "");
-		if (msg.startsWith("0x")) {
-			msg = msg.substring(2);
-		}	
-		// The regex alowing empty strings is intentional
-		if (/^[0-9a-fA-F]*$/.test(msg)) {
-			msg = Buffer.from(msg, "hex").toString("base64");
-		} else if (
-			!/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=?|[A-Za-z0-9+\/]{2}={0,2}?|[A-Za-z0-9+\/]={0,3}?)$/.test(msg)
-		) {
-			alert("EVM Execute instruction does not contain a valid hex or base64 string.");
-			return null;
-		}
 		return {
 			execute_evm_contract: {
 				contract,
 				value,
-				msg
+				msg: dataInputToBase64String(
+					this.refs.form.elements.data,
+					this.refs.form.elements.data_type
+				)
 			}
 		};
 	}
@@ -352,14 +475,28 @@ export class CourtProposalCreatorExecuteWasmElement extends CourtProposalCreator
 			this.refs.coinsContainer.appendChild(
 				new CourtProposalCreatorExecuteWasmCoinElement()
 			)
-		})
+		});
+		addContractPayloadValidation(
+			this.refs.form.elements.data,
+			this.refs.form.elements.data_type
+		);
 	}
 	#sortable: Sortable | null = null;
 	proposeTransactionMsg(): Extract<ProposedCourtMsgJsonable, {execute_wasm_contract: any}> | null {
 		if (!this.refs.form.elements.recipient.value) {
 			this.refs.form.elements.recipient.required = true;
 		}
+		if (!this.refs.form.elements.data_type.value) {
+			this.refs.form.elements.data_type.forEach((elem) => {
+				(elem as HTMLInputElement).required = true;
+			})
+		}
 		if (!this.refs.form.reportValidity()) {
+			return null;
+		}
+		if (this.refs.form.elements.data.classList.contains("invalid-input")) {
+			this.refs.form.elements.data.scrollTo({behavior: "smooth"});
+			this.refs.form.elements.data.focus();
 			return null;
 		}
 		const contract = this.refs.form.elements.recipient.value;
@@ -375,43 +512,14 @@ export class CourtProposalCreatorExecuteWasmElement extends CourtProposalCreator
 			funds.push(coin)
 		}
 		funds.sort(nativeDenomSortCompare);
-		
-		if (!isValidEvmAddress(this.refs.form.elements.recipient.value, true)) {
-			alert(
-				this.refs.form.elements.recipient.value +
-				" does not have the proper capitalization.\nPlease check the address and try again."
-			);
-			return null;
-		}
-		let msg = this.refs.form.elements.data.value;
-		switch (this.refs.form.elements.data_type.value) {
-			case "json":
-				try {
-					msg = JSON.stringify(JSON.parse(msg));
-				}catch(ex: any) {
-					alert("Execute wasm instruction does not contain valid JSON: " + ex.name + ": " + ex.message);
-					return null;
-				}
-			case "printable":
-				msg = Buffer.from(msg, "utf8").toString("base64");
-				break;
-			case "base64":
-				msg = msg.replace(/\s/, "");
-				if (
-					!/^(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=?|[A-Za-z0-9+\/]{2}={0,2}?|[A-Za-z0-9+\/]={0,3}?)$/.test(msg)
-				) {
-					alert("Execute wasm instruction does not contain a valid hex base64 string.");
-					return null;
-				}
-				break;
-			case "":
-				return null;
-		}
 		return {
 			execute_wasm_contract: {
 				contract,
 				funds,
-				msg
+				msg: dataInputToBase64String(
+					this.refs.form.elements.data,
+					this.refs.form.elements.data_type
+				)
 			}
 		};
 	}
@@ -458,5 +566,151 @@ export class CourtProposalCreatorDaoAdminElement extends CourtProposalCreatorDao
 			}
 		};
 	}
+	connectedCallback(): void {
+		this.classList.add("draggable-with-handle");
+	}
 }
-CourtProposalCreatorDaoAdminAutogen.registerElement();
+CourtProposalCreatorDaoAdminElement.registerElement();
+
+export class CourtProposalCreatorUpgradeWasmElement extends CourtProposalCreatorUpgradeWasmAutogen {
+	constructor() {
+		super();
+		this.refs.form.addEventListener("submit", preventDefault);
+		this.refs.deleteButton.addEventListener("click", (ev) => {
+			this.remove();
+		});
+		addContractPayloadValidation(
+			this.refs.form.elements.data,
+			this.refs.form.elements.data_type
+		);
+	}
+	proposeTransactionMsg(): Extract<ProposedCourtMsgJsonable, {upgrade_wasm_contract: any}> | null {
+		if (!this.refs.form.elements.recipient.value) {
+			this.refs.form.elements.recipient.required = true;
+		}
+		if (!this.refs.form.elements.data_type.value) {
+			this.refs.form.elements.data_type.forEach((elem) => {
+				(elem as HTMLInputElement).required = true;
+			})
+		}
+		if (!this.refs.form.elements.code.value) {
+			this.refs.form.elements.code.value = "0";
+			this.refs.form.elements.code.required = true;
+		}
+		if (!this.refs.form.reportValidity()) {
+			return null;
+		}
+		if (this.refs.form.elements.data.classList.contains("invalid-input")) {
+			this.refs.form.elements.data.scrollTo({behavior: "smooth"});
+			this.refs.form.elements.data.focus();
+			return null;
+		}
+		const contract = this.refs.form.elements.recipient.value;
+		return {
+			upgrade_wasm_contract: {
+				contract,
+				new_code_id: this.refs.form.elements.code.valueAsNumber,
+				msg: dataInputToBase64String(
+					this.refs.form.elements.data,
+					this.refs.form.elements.data_type
+				)
+			}
+		};
+	}
+	connectedCallback(): void {
+		this.classList.add("draggable-with-handle");
+	}
+}
+CourtProposalCreatorUpgradeWasmElement.registerElement();
+
+export class CourtProposalCreatorChangeWasmAdminElement extends CourtProposalCreatorChangeWasmAdminAutogen {
+	constructor() {
+		super();
+		this.refs.form.addEventListener("submit", preventDefault);
+		this.refs.deleteButton.addEventListener("click", (ev) => {
+			this.remove();
+		});
+	}
+	proposeTransactionMsg(): Extract<ProposedCourtMsgJsonable, {change_wasm_contract_admin: any}> | null {
+		if (!this.refs.form.elements.contract.value) {
+			this.refs.form.elements.contract.required = true;
+		}
+		if (!this.refs.form.elements.admin.value) {
+			this.refs.form.elements.admin.required = true;
+		}
+		if (!this.refs.form.reportValidity()) {
+			return null;
+		}
+		return {
+			change_wasm_contract_admin: {
+				contract: this.refs.form.elements.contract.value,
+				new_admin: this.refs.form.elements.admin.value
+			}
+		};
+	}
+	connectedCallback(): void {
+		this.classList.add("draggable-with-handle");
+	}
+}
+CourtProposalCreatorChangeWasmAdminElement.registerElement();
+
+export class CourtProposalCreatorClearWasmAdminElement extends CourtProposalCreatorClearWasmAdminAutogen {
+	constructor() {
+		super();
+		this.refs.form.addEventListener("submit", preventDefault);
+		this.refs.deleteButton.addEventListener("click", (ev) => {
+			this.remove();
+		});
+	}
+	proposeTransactionMsg(): Extract<ProposedCourtMsgJsonable, {clear_wasm_contract_admin: any}> | null {
+		if (!this.refs.form.elements.contract.value) {
+			this.refs.form.elements.contract.required = true;
+		}
+		if (!this.refs.form.reportValidity()) {
+			return null;
+		}
+		return {
+			clear_wasm_contract_admin: {
+				contract: this.refs.form.elements.contract.value
+			}
+		};
+	}
+	connectedCallback(): void {
+		this.classList.add("draggable-with-handle");
+	}
+}
+CourtProposalCreatorClearWasmAdminElement.registerElement();
+
+export class CourtProposalCreatorMintCoinElement extends CourtProposalCreatorMintCoinAutogen {
+	constructor() {
+		super();
+		this.refs.form.addEventListener("submit", preventDefault);
+		this.refs.deleteButton.addEventListener("click", (ev) => {
+			this.remove();
+		});
+	}
+	proposeTransactionMsg(): Extract<ProposedCourtMsgJsonable, {tokenfactory_mint: any}> | null {
+		if (!this.refs.form.elements.denom.value) {
+			this.refs.form.elements.denom.required = true;
+		}
+		if (!this.refs.form.elements.amount.value) {
+			this.refs.form.elements.amount.value = "0";
+			this.refs.form.elements.amount.required = true;
+		}
+		if (!this.refs.form.reportValidity()) {
+			return null;
+		}
+		return {
+			tokenfactory_mint: {
+				tokens: {
+					amount: this.refs.form.elements.amount.value,
+					denom: this.refs.form.elements.denom.value
+				}
+			}
+		};
+	}
+	connectedCallback(): void {
+		this.classList.add("draggable-with-handle");
+	}
+}
+CourtProposalCreatorMintCoinElement.registerElement();

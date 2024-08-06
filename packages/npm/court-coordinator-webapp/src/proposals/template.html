@@ -1,5 +1,8 @@
 <template cewt-name="court-proposals-container" cewt-extends="div">
-	<button cewt-ref="new-proposal-button" style="display: block; margin: auto;" class="primary">New proposal</button>
+	<div class="button-row" style="margin: 4px;">
+		<button cewt-ref="new-proposal-button" class="primary">New proposal</button>
+		<button cewt-ref="proposal-select-button">View proposal by ID</button>
+	</div>
 	<div is="court-proposal-placeholder"></div>
 </template>
 <template cewt-name="court-proposal" cewt-extends="div" cewt-attributes="proposal-id">
@@ -10,18 +13,18 @@
 	<hr class="pattern-stretch">
 	<div class="votes-breakdown">
 		<div class="important-note success">
-			<span cewt-ref="votes-approve-amount">0</span> approval votes (<span cewt-ref="votes-approve-percent">0</span>%)
+			<span cewt-ref="votes-approve-tokens" is="token-display"></span> approve (<span cewt-ref="votes-approve-percent">0</span>%)
 		</div>
 		<div class="important-note danger">
-			<span cewt-ref="votes-oppose-amount">0</span> opposing votes (<span cewt-ref="votes-oppose-percent">0</span>%)
+			<span cewt-ref="votes-oppose-tokens" is="token-display"></span> oppose (<span cewt-ref="votes-oppose-percent">0</span>%)
 		</div>
 		<div class="important-note">
-			<span cewt-ref="votes-abstain-amount">0</span> abstain votes (<span cewt-ref="votes-abstain-percent">0</span>%)
+			<span cewt-ref="votes-abstain-tokens" is="token-display"></span> abstain (<span cewt-ref="votes-abstain-percent">0</span>%)
 		</div>
 	</div>
 	<div class="important-note" cewt-ref="voter-turnout-container">
-		Total votes: <span cewt-ref="votes-turnout-amount">0</span>
-		<span class="hide-if-refs-empty"><br>(Minimum of <span cewt-ref="votes-turnout-needed-amount">0</span> required)</span>
+		Total votes: <span cewt-ref="votes-turnout-tokens" is="token-display"></span>
+		<span class="hide-if-refs-empty"><br>(Minimum of <span cewt-ref="votes-turnout-needed-tokens" is="token-display"></span> required)</span>
 	</div>
 	<progress-stacked cewt-ref="votes-turnout-progress" style="width: 100%;">
 
@@ -40,7 +43,7 @@
 	</ol>
 	<hr class="pattern-stretch">
 	<div class="important-note hide-if-refs-empty">
-		You've used <span cewt-ref="user-proposal-votes">0</span><span class="hide-if-refs-empty">/<span cewt-ref="user-total-votes">0</span></span> of your votes
+		You voted with <span cewt-ref="user-voting-tokens" is="token-display">0</span><span class="hide-if-refs-empty"> of your staked <span cewt-ref="user-staked-tokens" is="token-display"></span></span> in this proposal.
 	</div>
 	<form cewt-ref="user-vote-form" class="fantasy-input-group">
 		<label class="button fantasy success"><span>Approve</span><input name="vote" type="radio" value="approve"></label>
@@ -51,7 +54,7 @@
 </template>
 
 <template cewt-name="court-proposal-msg-send-coin" cewt-extends="li" cewt-attributes="denom, coin-amount, recipient">
-	Send <span cewt-ref="coins">??? ???</span> to <span cewt-ref="recipient">???</span>
+	Send <span cewt-ref="token-display" is="token-display"></span> to <span cewt-ref="recipient">???</span>
 </template>
 
 <template cewt-name="court-proposal-msg-wasm-exec" cewt-extends="li" cewt-attributes="contract, funds, payload">
@@ -78,7 +81,7 @@
 </template>
 
 <template cewt-name="court-proposal-msg-mint" cewt-extends="li" cewt-attributes="denom, amount">
-	Mint <span cewt-ref="coins">???</span>
+	Mint <span cewt-ref="token-display" is="token-display"></span>
 </template>
 
 <template cewt-name="court-proposal-placeholder" cewt-extends="div">
@@ -149,6 +152,7 @@
 	</div>
 	<button class="small" style="display: block; margin: 4px auto">Add instruction</button>
 	<dropdown-menu click-trigger="primary" linked-elements="*:has(+ #this)">
+		<dropdown-menu-item cewt-ref="menu-item-dao-admin" value="change_court_admin">Set DAO admin</dropdown-menu-item>
 		<dropdown-menu-item value="send_coin">Send coin (Native, ERC20, or CW20)</dropdown-menu-item>
 		<dropdown-menu-item value="execute_evm">EVM instruction</dropdown-menu-item>
 		<dropdown-menu-item value="execute_wasm">CosmWasm instruction</dropdown-menu-item>
@@ -176,8 +180,8 @@
 			<input name="recipient" type="text" title="A valid 0x or sei1 address" pattern="^(0x[a-fA-F0-9]{40}|sei1(?:[a-z0-9]{38}|[a-z0-9]{58}))$" placeholder="sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5">
 		</label>
 		<label>
-			<span>Denom (native tokens should have their base unit entered as is, ERC20 tokens should be prepended with "erc20/", and sei1 tokens should be prepended with "cw20/")</span>
-			<input name="denom" type="text" title="A token base unit" placeholder="usei">
+			<span>Denom (native/ibc tokens should have their base unit entered as is, ERC20 tokens should be prepended with "erc20/", and sei1 tokens should be prepended with "cw20/")</span>
+			<input name="denom" type="text" title="A token base unit" placeholder="usei" pattern="^(?:(?!erc20\/|cw20\/)[a-zA-Z][a-zA-Z0-9/:._\-]{2,127}|cw20\/sei1(?:[a-z0-9]{38}|[a-z0-9]{58})|erc20\/0x[a-fA-F0-9]{40})$">
 		</label>
 		<label>
 			<span>Amount (no decimals)</span>
@@ -202,9 +206,11 @@
 			<input min="0" step="1" placeholder="0" name="amount" type="number">
 		</label>
 		<label>
-			<span>Instruction data (Base64 or hex-encoded)</span>
+			<span>Instruction data</span>
 			<textarea name="data"></textarea>
 		</label>
+		<label><input required type="radio" name="data_type" checked value="hex"><span>Hex-encoded</span></label>
+		<label><input required type="radio" name="data_type" value="base64"><span>Base64-encoded</span></label>
 	</form>
 </template>
 
@@ -224,8 +230,8 @@
 			<textarea name="data"></textarea>
 		</label>
 		<label><input type="radio" name="data_type" checked value="json"><span>JSON (used by most contracts)</span></label>
-		<!-- <label><input type="radio" name="data_type" value="printable"><span>Printable non-JSON</span></label> -->
-		<label><input type="radio" name="data_type" value="base64"><span>Base64</span></label>
+		<label><input type="radio" name="data_type" value="utf8"><span>Plaintext</span></label>
+		<label><input type="radio" name="data_type" value="base64"><span>Base64-encoded</span></label>
 		<div cewt-ref="coins-container">
 		</div>
 		<button class="small" cewt-ref="add-coins-button" style="display: block; margin: auto">Add coin</button>
@@ -238,12 +244,12 @@
 	</button>
 	<form cewt-ref="form">
 		<label>
-			<span>Denom (native tokens should have their base unit entered as is, ERC20 tokens should be prepended with "erc20/", and sei1 tokens should be prepended with "cw20/")</span>
-			<input name="denom" type="text" title="A token base unit" placeholder="usei">
+			<span>Denom (ERC20 and CW20 assets cannot be used here)</span>
+			<input name="denom" type="text" title="A token base unit" placeholder="usei" pattern="^(?!erc20\/|cw20\/)[a-zA-Z][a-zA-Z0-9/:._\-]{2,127}$">
 		</label>
 		<label>
 			<span>Amount (no decimals)</span>
-			<input min="1" step="1" required placeholder="0" name="amount" type="number">
+			<input min="1" step="1" placeholder="0" name="amount" type="number">
 		</label>
 	</form>
 </template>
@@ -274,15 +280,15 @@
 			<input name="recipient" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
 		</label>
 		<label>
-			<span>New Code ID (required)</span>
-			<input min="1" step="1" placeholder="0" name="amount" type="number">
+			<span>New Code ID</span>
+			<input min="1" step="1" placeholder="0" name="code" type="number">
 		</label>
 		<label>
 			<span>Instruction data</span>
 			<textarea name="data"></textarea>
 		</label>
 		<label><input type="radio" name="data_type" value="json"><span>JSON (used by most contracts)</span></label>
-		<label><input type="radio" name="data_type" value="printable"><span>Printable non-JSON</span></label>
+		<label><input type="radio" name="data_type" value="utf8"><span>Plaintext</span></label>
 		<label><input type="radio" name="data_type" value="base64"><span>Base64-encoded</span></label>
 	</form>
 </template>
@@ -295,12 +301,12 @@
 	<form cewt-ref="form">
 		<h5>Change CosmWasm contract admin</h5>
 		<label>
-			<span>Contract (required)</span>
-			<input name="recipient" type="text" title="A valid sei1 address" required pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
+			<span>Contract</span>
+			<input name="contract" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
 		</label>
 		<label>
-			<span>New admin (required)</span>
-			<input name="admin" type="text" title="A valid sei1 address" required pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5">
+			<span>New admin</span>
+			<input name="admin" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5">
 		</label>
 	</form>
 </template>
@@ -313,8 +319,8 @@
 	<form cewt-ref="form">
 		<h5>Clear CosmWasm contract admin</h5>
 		<label>
-			<span>Contract (required)</span>
-			<input name="recipient" type="text" title="A valid sei1 address" required pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
+			<span>Contract</span>
+			<input name="contract" type="text" title="A valid sei1 address" pattern="^sei1(?:[a-z0-9]{38}|[a-z0-9]{58})$" placeholder="sei1hrpna9v7vs3stzyd4z3xf00676kf78zpe2u5ksvljswn2vnjp3yslucc3n">
 		</label>
 	</form>
 </template>
@@ -327,12 +333,12 @@
 	<form cewt-ref="form">
 		<h5>Mint coin</h5>
 		<label>
-			<span>Denom (required) - Tokenfactory token base unit</span>
-			<input name="denom" type="text" title="A token base unit" required>
+			<span>Denom</span>
+			<input name="denom" type="text" placeholder="factory/sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5/mycoin" title="Token-factory base denom with the format factory/{address}/{name}" pattern="^factory\/sei1(?:[a-z0-9]{38}|[a-z0-9]{58})\/[a-zA-Z0-9:._\-]+$">
 		</label>
 		<label>
-			<span>Amount (required, no decimals)</span>
-			<input min="1" step="1" required placeholder="0" name="amount" type="number">
+			<span>Amount (no decimals)</span>
+			<input min="1" step="1" placeholder="0" name="amount" type="number">
 		</label>
 	</form>
 </template>
