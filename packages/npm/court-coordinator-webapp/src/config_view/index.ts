@@ -94,11 +94,12 @@ export class CourtConfigElement extends CourtConfigAutogen {
 					this.refs.adminMintButton.disabled = true;
 					const client = await WebClientEnv.get();
 					const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
-
+					const votesDenom = (await contract.queryDenom()).votes;
 					const votesSupply = BigInt((await contract.queryTotalSupply()).votes);
 					const config = await contract.queryConfig();
 
-					this.refs.totalShares.innerText = votesSupply + "";
+					this.refs.totalVoteTokens.amount = votesSupply + "";
+					this.refs.totalVoteTokens.denom = votesDenom;
 
 					if (config.admin == contract.address) {
 						this.refs.configAdmin.innerText = "[None, one can be proposed]";
@@ -109,13 +110,15 @@ export class CourtConfigElement extends CourtConfigAutogen {
 					this.refs.configProposalsAllowed.checked = config.allow_new_proposals;
 					this.refs.adminProposalsButton.checked = config.allow_new_proposals;
 					this.refs.configMinVotesNewPercent.innerText = config.minimum_vote_proposal_percent + "";
-					this.refs.configMinVotesNewAmount.innerText = (
+					this.refs.configMinVotesNewAmountTokens.amount = (
 						votesSupply * BigInt(config.minimum_vote_proposal_percent) / 100n
 					) + "";
+					this.refs.configMinVotesNewAmountTokens.denom = votesDenom;
 					this.refs.configMinTurnoutPercent.innerText = config.minimum_vote_turnout_percent + "";
-					this.refs.configMinTurnoutAmount.innerText = (
+					this.refs.configMinTurnoutTokens.amount = (
 						votesSupply * BigInt(config.minimum_vote_turnout_percent) / 100n
 					) + "";
+					this.refs.configMinTurnoutTokens.denom = votesDenom;
 					this.refs.configMinApprovalPercent.innerText = config.minimum_vote_pass_percent + "";
 					this.refs.configVotingTime.innerText = humanReadableTimeAmount(config.max_proposal_expiry_time_seconds * 1000);
 					this.refs.configExecutionWindow.innerText = humanReadableTimeAmount(config.execution_expiry_time_seconds * 1000);

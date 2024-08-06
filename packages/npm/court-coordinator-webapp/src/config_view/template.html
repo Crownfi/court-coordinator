@@ -9,7 +9,7 @@
 		</tr>
 		<tr>
 			<th>Total shares minted</th>
-			<td cewt-ref="total-shares">-</td>
+			<td><span cewt-ref="total-vote-tokens" is="token-display"></span></td>
 		</tr>
 		<tr>
 			<th>Proposals enabled</th>
@@ -23,14 +23,14 @@
 			<th>Minimum votes for new proposal</th>
 			<td>
 				<span cewt-ref="config-min-votes-new-percent">--</span>% of total supply
-				(<span cewt-ref="config-min-votes-new-amount">--</span>)
+				(<span cewt-ref="config-min-votes-new-amount-tokens" is="token-display"></span>)
 			</td>
 		</tr>
 		<tr>
 			<th>Minimum vote turnout for proposal approval</th>
 			<td>
 				<span cewt-ref="config-min-turnout-percent">--</span>% of total supply
-				(<span cewt-ref="config-min-turnout-amount">--</span>)
+				(<span cewt-ref="config-min-turnout-tokens" is="token-display"></span>)
 			</td>
 		</tr>
 		<tr>

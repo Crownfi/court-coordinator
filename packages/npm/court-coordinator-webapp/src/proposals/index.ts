@@ -21,20 +21,21 @@ export class CourtProposalsContainerElement extends CourtProposalsContainerAutog
 					task.show();
 					const client = await ClientEnv.get();
 					const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
-					const [totalSupply, contractConfig] = await Promise.all([
+					const [totalSupply, contractConfig, contractDenoms] = await Promise.all([
 						contract.queryTotalSupply(),
-						contract.queryConfig()
+						contract.queryConfig(),
+						contract.queryDenom()
 					]);
 					const votesRequiredForProposal = BigInt(totalSupply.votes) * BigInt(
 						contractConfig.minimum_vote_proposal_percent
 					) / 100n;
 					if (client.account == null) {
-						throw new NotEnoughStakedVotesForProposalError(votesRequiredForProposal, 0n);
+						throw new NotEnoughStakedVotesForProposalError(votesRequiredForProposal, 0n, contractDenoms.votes);
 					}
 					const userStats = await contract.queryUserStats({user: client.account.seiAddress});
 					const userStakesVotes = BigInt(userStats.staked_votes);
 					if (userStakesVotes < votesRequiredForProposal) {
-						throw new NotEnoughStakedVotesForProposalError(votesRequiredForProposal, userStakesVotes);
+						throw new NotEnoughStakedVotesForProposalError(votesRequiredForProposal, userStakesVotes, contractDenoms.votes);
 					}
 					CourtProposalCreatorElement.showModalAndDoTransaction();
 				} finally {

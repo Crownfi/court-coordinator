@@ -21,13 +21,6 @@ export class StakingInputsRefs {
 		}
 		return this.#unstakedBalance;
 	}
-	#unstakedDenom?: HTMLSpanElement;
-	get unstakedDenom() {
-		if (this.#unstakedDenom === undefined) {
-			this.#unstakedDenom = this.#element.querySelector("[cewt-ref=\"unstaked-denom\"]:not(:scope [is] *)")!;
-		}
-		return this.#unstakedDenom;
-	}
 	#stakedBalance?: HTMLSpanElement;
 	get stakedBalance() {
 		if (this.#stakedBalance === undefined) {
@@ -47,7 +40,7 @@ let _templateStakingInputs: HTMLTemplateElement | null = null;
 function getStakingInputsTemplate(): HTMLTemplateElement {
 	if (_templateStakingInputs == null) {
 		 _templateStakingInputs = document.createElement("template")
-		 _templateStakingInputs.innerHTML = "\n\t<h3 class=\"text-primary text-fantasy\">User shares</h3>\n\t<p>\n\t\tIn order to participate in the DAO, you must stake your votes.\n\t</p>\n\t<form cewt-ref=\"form-stake\">\n\t\t<div class=\"trade-amount-balance\">\n\t\t\tUnstaked shares: <span cewt-ref=\"unstaked-balance\"></span>\n\t\t</div>\n\t\t<label class=\"trade-amount-input\">\n\t\t\t<span class=\"trade-amount-denom\" cewt-ref=\"unstaked-denom\">Shares</span>\n\t\t\t<input type=\"number\" min=\"1\" class=\"form-control\" name=\"amount\" placeholder=\"0\">\n\t\t</label>\n\t\t<button class=\"primary small trade-execute\">Stake</button>\n\t</form>\n\n\t<div class=\"trade-amount-balance\">\n\t\tStaked shares: <span cewt-ref=\"staked-balance\"></span>\n\t</div>\n\t<div class=\"important-note\">\n\t\tYou may only unstake your voting shares after all proposals you\'ve voted on have been finalized.\n\t</div>\n\t<button cewt-ref=\"button-unstake\" class=\"primary small trade-execute\">Unstake</button>\n";
+		 _templateStakingInputs.innerHTML = "\n\t<h3 class=\"text-primary text-fantasy\">User shares</h3>\n\t<p>\n\t\tIn order to participate in the DAO, you must stake your votes.\n\t</p>\n\t<form cewt-ref=\"form-stake\">\n\t\t<div class=\"trade-amount-balance\">\n\t\t\tUnstaked shares: <span cewt-ref=\"unstaked-balance\"></span>\n\t\t</div>\n\t\t<label class=\"trade-amount-input\">\n\t\t\t<span>Amount to stake</span>\n\t\t\t<input type=\"number\" min=\"1\" class=\"form-control\" name=\"amount\" placeholder=\"0\">\n\t\t</label>\n\t\t<button class=\"primary small trade-execute\">Stake</button>\n\t</form>\n\n\t<div class=\"trade-amount-balance\">\n\t\tStaked shares: <span cewt-ref=\"staked-balance\"></span>\n\t</div>\n\t<div class=\"important-note\">\n\t\tYou may only unstake your voting shares after all proposals you\'ve voted on have been finalized.\n\t</div>\n\t<button cewt-ref=\"button-unstake\" class=\"primary small trade-execute\">Unstake</button>\n";
 	}
 	return _templateStakingInputs;
 }

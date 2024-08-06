@@ -1,10 +1,10 @@
 import { StakingInputsAutogen } from "./_autogen.js";
-import { ClientEnv, seiUtilEventEmitter } from "@crownfi/sei-utils";
+import { addUserTokenInfo, ClientEnv, getUserTokenInfo, hasUserTokenInfo, seiUtilEventEmitter, stringDecimalToBigInt } from "@crownfi/sei-utils";
 import { applyCustomElementsWorkaround, disableFormInputs, enableFormInputs, qa } from "@aritz-cracker/browser-utils";
 import { coin } from "@cosmjs/proto-signing";
 import { getCourtCoordinatorFromChainId } from "@crownfi/court-coordinator-sdk";
 import { FullscreenLoadingTask, msgBoxIfThrow } from "@crownfi/css-gothic-fantasy";
-import { WebClientEnv } from "@crownfi/sei-webui-utils";
+import { TokenDisplayElement, WebClientEnv } from "@crownfi/sei-webui-utils";
 await applyCustomElementsWorkaround();
 
 export class StakingInputsElement extends StakingInputsAutogen {
@@ -18,7 +18,6 @@ export class StakingInputsElement extends StakingInputsAutogen {
 				this.refs.formStake.reportValidity();
 				return;
 			}
-			const inAmount = this.refs.formStake.elements.amount.value;
 			msgBoxIfThrow(async () => {
 				const task = new FullscreenLoadingTask();
 				try{
@@ -28,8 +27,15 @@ export class StakingInputsElement extends StakingInputsAutogen {
 					const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
 					task.text = "Querying contract...";
 					const {votes: voteSharesDenom} = await contract.queryDenom();
+					const inAmount = stringDecimalToBigInt(
+						this.refs.formStake.elements.amount.value,
+						getUserTokenInfo(voteSharesDenom).decimals
+					);
+					if (inAmount == null) {
+						return;
+					}
 					task.text = "";
-					await client.executeContract(contract.buildStakeIx([coin(inAmount, voteSharesDenom)]))
+					await client.executeContract(contract.buildStakeIx([coin(inAmount + "", voteSharesDenom)]))
 				}finally{
 					task.hide();
 					this.refreshBalances();
@@ -97,15 +103,27 @@ export class StakingInputsElement extends StakingInputsAutogen {
 				this.refs.buttonUnstake.disabled = false;
 				const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
 				const {votes: voteSharesDenom} = await contract.queryDenom();
+				if (!hasUserTokenInfo(voteSharesDenom)) {
+					await addUserTokenInfo(client.queryClient, client.chainId, voteSharesDenom);
+				}
+				const minAmount = 10 ** -(getUserTokenInfo(voteSharesDenom).decimals);
+				this.refs.formStake.elements.amount.step = minAmount + "";
+				this.refs.formStake.elements.amount.min = minAmount + "";
 				await Promise.all([
 					(async () => {
 						const userStats = await contract.queryUserStats({user: client.getAccount().seiAddress});
-						this.refs.stakedBalance.innerText = userStats.staked_votes;
+						const tokenDisplay = new TokenDisplayElement();
+						tokenDisplay.denom = voteSharesDenom;
+						tokenDisplay.amount = userStats.staked_votes;
+						this.refs.stakedBalance.replaceChildren(tokenDisplay);
 						this.refs.stakedBalance.classList.remove("loading-spinner-inline");
 					})(),
 					(async () => {
 						const userBalance = await client.getBalance(voteSharesDenom);
-						this.refs.unstakedBalance.innerText = userBalance + "";
+						const tokenDisplay = new TokenDisplayElement();
+						tokenDisplay.denom = voteSharesDenom;
+						tokenDisplay.amount = userBalance + "";
+						this.refs.unstakedBalance.replaceChildren(tokenDisplay);
 						this.refs.unstakedBalance.classList.remove("loading-spinner-inline");
 					})()
 				]);
