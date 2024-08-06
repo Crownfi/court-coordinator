@@ -99,7 +99,6 @@ export class StakingInputsElement extends StakingInputsAutogen {
 					this.refs.unstakedBalance.innerText = "[Not connected]";
 					return;
 				}
-				enableFormInputs(this.refs.formStake);
 				this.refs.buttonUnstake.disabled = false;
 				const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
 				const {votes: voteSharesDenom} = await contract.queryDenom();
@@ -109,6 +108,7 @@ export class StakingInputsElement extends StakingInputsAutogen {
 				const minAmount = 10 ** -(getUserTokenInfo(voteSharesDenom).decimals);
 				this.refs.formStake.elements.amount.step = minAmount + "";
 				this.refs.formStake.elements.amount.min = minAmount + "";
+				enableFormInputs(this.refs.formStake);
 				await Promise.all([
 					(async () => {
 						const userStats = await contract.queryUserStats({user: client.getAccount().seiAddress});
