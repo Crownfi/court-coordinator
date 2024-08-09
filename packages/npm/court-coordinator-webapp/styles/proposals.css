@@ -101,13 +101,17 @@
 }
 .drag-handle:hover::before, .drag-handle:hover::after,
 .drag-handle:active::before, .drag-handle:active::after,
-.drag-handle:hover, .drag-handle:active,
+.drag-handle:focus::before, .drag-handle:focus::after,
+.drag-handle:hover, .drag-handle:active, .drag-handle:focus,
 .draggable-placeholder .drag-handle,
 .draggable-placeholder .drag-handle::before,
 .draggable-placeholder .drag-handle::after {
 	opacity: 1;
 }
-
+.drag-handle:focus-visible {
+	outline: 1px solid var(--colour-secondary-500);
+	outline-offset: 2px;
+}
 .draggable-placeholder {
 	filter: grayscale(0.5);
 	opacity: 0.8;

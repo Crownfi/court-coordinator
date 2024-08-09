@@ -181,7 +181,7 @@
 		</label>
 		<label>
 			<span>Denom (native/ibc tokens should have their base unit entered as is, ERC20 tokens should be prepended with "erc20/", and sei1 tokens should be prepended with "cw20/")</span>
-			<input name="denom" type="text" title="A token base unit" placeholder="usei" pattern="^(?:(?!erc20\/|cw20\/)[a-zA-Z][a-zA-Z0-9/:._\-]{2,127}|cw20\/sei1(?:[a-z0-9]{38}|[a-z0-9]{58})|erc20\/0x[a-fA-F0-9]{40})$">
+			<input name="denom" type="text" title="A token base unit" placeholder="usei" pattern="^(?:(?!erc20\/|cw20\/)[a-zA-Z][a-zA-Z0-9\/:._\-]{2,127}|cw20\/sei1(?:[a-z0-9]{38}|[a-z0-9]{58})|erc20\/0x[a-fA-F0-9]{40})$">
 		</label>
 		<label>
 			<span>Amount (no decimals)</span>
@@ -245,7 +245,7 @@
 	<form cewt-ref="form">
 		<label>
 			<span>Denom (ERC20 and CW20 assets cannot be used here)</span>
-			<input name="denom" type="text" title="A token base unit" placeholder="usei" pattern="^(?!erc20\/|cw20\/)[a-zA-Z][a-zA-Z0-9/:._\-]{2,127}$">
+			<input name="denom" type="text" title="A token base unit" placeholder="usei" pattern="^(?!erc20\/|cw20\/)[a-zA-Z][a-zA-Z0-9\/:._\-]{2,127}$">
 		</label>
 		<label>
 			<span>Amount (no decimals)</span>

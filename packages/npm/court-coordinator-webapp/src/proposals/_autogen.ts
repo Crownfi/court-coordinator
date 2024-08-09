@@ -311,7 +311,21 @@ function getCourtProposalMsgSendCoinTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgSendCoinRefs;
 	static get observedAttributes() {
-		return ["denom", "recipient", "coin-amount"];
+		return ["coin-amount", "denom", "recipient"];
+	}
+	#attributeCoinAmountValue: string | null = null;
+	get coinAmount(): string | null {
+		return this.#attributeCoinAmountValue;
+	}
+	set coinAmount(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("coin-amount");
+		}else{
+			this.setAttribute("coin-amount", v);
+		}
+	}
+	protected onCoinAmountChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
 	}
 	#attributeDenomValue: string | null = null;
 	get denom(): string | null {
@@ -341,22 +355,12 @@ export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 	protected onRecipientChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
-	#attributeCoinAmountValue: string | null = null;
-	get coinAmount(): string | null {
-		return this.#attributeCoinAmountValue;
-	}
-	set coinAmount(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("coin-amount");
-		}else{
-			this.setAttribute("coin-amount", v);
-		}
-	}
-	protected onCoinAmountChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
-	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
+			case "coin-amount":
+				this.#attributeCoinAmountValue = newValue;
+				this.onCoinAmountChanged(oldValue, newValue);
+				break;
 			case "denom":
 				this.#attributeDenomValue = newValue;
 				this.onDenomChanged(oldValue, newValue);
@@ -364,10 +368,6 @@ export class CourtProposalMsgSendCoinAutogen extends HTMLLIElement {
 			case "recipient":
 				this.#attributeRecipientValue = newValue;
 				this.onRecipientChanged(oldValue, newValue);
-				break;
-			case "coin-amount":
-				this.#attributeCoinAmountValue = newValue;
-				this.onCoinAmountChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -429,7 +429,7 @@ function getCourtProposalMsgWasmExecTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmExecRefs;
 	static get observedAttributes() {
-		return ["contract", "payload", "funds"];
+		return ["contract", "funds", "payload"];
 	}
 	#attributeContractValue: string | null = null;
 	get contract(): string | null {
@@ -443,20 +443,6 @@ export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 		}
 	}
 	protected onContractChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
-	}
-	#attributePayloadValue: string | null = null;
-	get payload(): string | null {
-		return this.#attributePayloadValue;
-	}
-	set payload(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("payload");
-		}else{
-			this.setAttribute("payload", v);
-		}
-	}
-	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	#attributeFundsValue: string | null = null;
@@ -473,19 +459,33 @@ export class CourtProposalMsgWasmExecAutogen extends HTMLLIElement {
 	protected onFundsChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributePayloadValue: string | null = null;
+	get payload(): string | null {
+		return this.#attributePayloadValue;
+	}
+	set payload(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("payload");
+		}else{
+			this.setAttribute("payload", v);
+		}
+	}
+	protected onPayloadChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
 			case "contract":
 				this.#attributeContractValue = newValue;
 				this.onContractChanged(oldValue, newValue);
 				break;
-			case "payload":
-				this.#attributePayloadValue = newValue;
-				this.onPayloadChanged(oldValue, newValue);
-				break;
 			case "funds":
 				this.#attributeFundsValue = newValue;
 				this.onFundsChanged(oldValue, newValue);
+				break;
+			case "payload":
+				this.#attributePayloadValue = newValue;
+				this.onPayloadChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -547,21 +547,7 @@ function getCourtProposalMsgEvmExecTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgEvmExecAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgEvmExecRefs;
 	static get observedAttributes() {
-		return ["contract", "asei-amount", "payload"];
-	}
-	#attributeContractValue: string | null = null;
-	get contract(): string | null {
-		return this.#attributeContractValue;
-	}
-	set contract(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("contract");
-		}else{
-			this.setAttribute("contract", v);
-		}
-	}
-	protected onContractChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["asei-amount", "contract", "payload"];
 	}
 	#attributeAseiAmountValue: string | null = null;
 	get aseiAmount(): string | null {
@@ -575,6 +561,20 @@ export class CourtProposalMsgEvmExecAutogen extends HTMLLIElement {
 		}
 	}
 	protected onAseiAmountChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
+	#attributeContractValue: string | null = null;
+	get contract(): string | null {
+		return this.#attributeContractValue;
+	}
+	set contract(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("contract");
+		}else{
+			this.setAttribute("contract", v);
+		}
+	}
+	protected onContractChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	#attributePayloadValue: string | null = null;
@@ -593,13 +593,13 @@ export class CourtProposalMsgEvmExecAutogen extends HTMLLIElement {
 	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "contract":
-				this.#attributeContractValue = newValue;
-				this.onContractChanged(oldValue, newValue);
-				break;
 			case "asei-amount":
 				this.#attributeAseiAmountValue = newValue;
 				this.onAseiAmountChanged(oldValue, newValue);
+				break;
+			case "contract":
+				this.#attributeContractValue = newValue;
+				this.onContractChanged(oldValue, newValue);
 				break;
 			case "payload":
 				this.#attributePayloadValue = newValue;
@@ -672,21 +672,7 @@ function getCourtProposalMsgWasmUpgradeTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmUpgradeRefs;
 	static get observedAttributes() {
-		return ["contract", "code-id", "payload"];
-	}
-	#attributeContractValue: string | null = null;
-	get contract(): string | null {
-		return this.#attributeContractValue;
-	}
-	set contract(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("contract");
-		}else{
-			this.setAttribute("contract", v);
-		}
-	}
-	protected onContractChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["code-id", "contract", "payload"];
 	}
 	#attributeCodeIdValue: string | null = null;
 	get codeId(): string | null {
@@ -700,6 +686,20 @@ export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 		}
 	}
 	protected onCodeIdChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
+	#attributeContractValue: string | null = null;
+	get contract(): string | null {
+		return this.#attributeContractValue;
+	}
+	set contract(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("contract");
+		}else{
+			this.setAttribute("contract", v);
+		}
+	}
+	protected onContractChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
 	#attributePayloadValue: string | null = null;
@@ -718,13 +718,13 @@ export class CourtProposalMsgWasmUpgradeAutogen extends HTMLLIElement {
 	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "contract":
-				this.#attributeContractValue = newValue;
-				this.onContractChanged(oldValue, newValue);
-				break;
 			case "code-id":
 				this.#attributeCodeIdValue = newValue;
 				this.onCodeIdChanged(oldValue, newValue);
+				break;
+			case "contract":
+				this.#attributeContractValue = newValue;
+				this.onContractChanged(oldValue, newValue);
 				break;
 			case "payload":
 				this.#attributePayloadValue = newValue;
@@ -790,21 +790,7 @@ function getCourtProposalMsgWasmChAdminTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgWasmChAdminAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgWasmChAdminRefs;
 	static get observedAttributes() {
-		return ["contract", "admin"];
-	}
-	#attributeContractValue: string | null = null;
-	get contract(): string | null {
-		return this.#attributeContractValue;
-	}
-	set contract(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("contract");
-		}else{
-			this.setAttribute("contract", v);
-		}
-	}
-	protected onContractChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["admin", "contract"];
 	}
 	#attributeAdminValue: string | null = null;
 	get admin(): string | null {
@@ -820,15 +806,29 @@ export class CourtProposalMsgWasmChAdminAutogen extends HTMLLIElement {
 	protected onAdminChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributeContractValue: string | null = null;
+	get contract(): string | null {
+		return this.#attributeContractValue;
+	}
+	set contract(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("contract");
+		}else{
+			this.setAttribute("contract", v);
+		}
+	}
+	protected onContractChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "contract":
-				this.#attributeContractValue = newValue;
-				this.onContractChanged(oldValue, newValue);
-				break;
 			case "admin":
 				this.#attributeAdminValue = newValue;
 				this.onAdminChanged(oldValue, newValue);
+				break;
+			case "contract":
+				this.#attributeContractValue = newValue;
+				this.onContractChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -958,21 +958,7 @@ function getCourtProposalMsgMintTemplate(): HTMLTemplateElement {
 export class CourtProposalMsgMintAutogen extends HTMLLIElement {
 	readonly refs: CourtProposalMsgMintRefs;
 	static get observedAttributes() {
-		return ["denom", "amount"];
-	}
-	#attributeDenomValue: string | null = null;
-	get denom(): string | null {
-		return this.#attributeDenomValue;
-	}
-	set denom(v: string | null) {
-		if (v == null) {
-			this.removeAttribute("denom");
-		}else{
-			this.setAttribute("denom", v);
-		}
-	}
-	protected onDenomChanged(oldValue: string | null, newValue: string | null) {
-		// To be overridden by child class
+		return ["amount", "denom"];
 	}
 	#attributeAmountValue: string | null = null;
 	get amount(): string | null {
@@ -988,15 +974,29 @@ export class CourtProposalMsgMintAutogen extends HTMLLIElement {
 	protected onAmountChanged(oldValue: string | null, newValue: string | null) {
 		// To be overridden by child class
 	}
+	#attributeDenomValue: string | null = null;
+	get denom(): string | null {
+		return this.#attributeDenomValue;
+	}
+	set denom(v: string | null) {
+		if (v == null) {
+			this.removeAttribute("denom");
+		}else{
+			this.setAttribute("denom", v);
+		}
+	}
+	protected onDenomChanged(oldValue: string | null, newValue: string | null) {
+		// To be overridden by child class
+	}
 	attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null) {
 		switch(name) {
-			case "denom":
-				this.#attributeDenomValue = newValue;
-				this.onDenomChanged(oldValue, newValue);
-				break;
 			case "amount":
 				this.#attributeAmountValue = newValue;
 				this.onAmountChanged(oldValue, newValue);
+				break;
+			case "denom":
+				this.#attributeDenomValue = newValue;
+				this.onDenomChanged(oldValue, newValue);
 				break;
 			default:
 				// Shouldn't happen
@@ -1265,7 +1265,7 @@ let _templateCourtProposalCreatorSendCoin: HTMLTemplateElement | null = null;
 function getCourtProposalCreatorSendCoinTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposalCreatorSendCoin == null) {
 		 _templateCourtProposalCreatorSendCoin = document.createElement("template")
-		 _templateCourtProposalCreatorSendCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Send coin</h5>\n\t\t<label>\n\t\t\t<span>Recipient</span>\n\t\t\t<input name=\"recipient\" type=\"text\" title=\"A valid 0x or sei1 address\" pattern=\"^(0x[a-fA-F0-9]{40}|sei1(?:[a-z0-9]{38}|[a-z0-9]{58}))$\" placeholder=\"sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Denom (native/ibc tokens should have their base unit entered as is, ERC20 tokens should be prepended with \"erc20/\", and sei1 tokens should be prepended with \"cw20/\")</span>\n\t\t\t<input name=\"denom\" type=\"text\" title=\"A token base unit\" placeholder=\"usei\" pattern=\"^(?:(?!erc20\\/|cw20\\/)[a-zA-Z][a-zA-Z0-9/:._\\-]{2,127}|cw20\\/sei1(?:[a-z0-9]{38}|[a-z0-9]{58})|erc20\\/0x[a-fA-F0-9]{40})$\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (no decimals)</span>\n\t\t\t<input min=\"1\" step=\"1\" placeholder=\"0\" name=\"amount\" type=\"number\">\n\t\t</label>\n\t</form>\n";
+		 _templateCourtProposalCreatorSendCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<h5>Send coin</h5>\n\t\t<label>\n\t\t\t<span>Recipient</span>\n\t\t\t<input name=\"recipient\" type=\"text\" title=\"A valid 0x or sei1 address\" pattern=\"^(0x[a-fA-F0-9]{40}|sei1(?:[a-z0-9]{38}|[a-z0-9]{58}))$\" placeholder=\"sei19rl4cm2hmr8afy4kldpxz3fka4jguq0a3vute5\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Denom (native/ibc tokens should have their base unit entered as is, ERC20 tokens should be prepended with \"erc20/\", and sei1 tokens should be prepended with \"cw20/\")</span>\n\t\t\t<input name=\"denom\" type=\"text\" title=\"A token base unit\" placeholder=\"usei\" pattern=\"^(?:(?!erc20\\/|cw20\\/)[a-zA-Z][a-zA-Z0-9\\/:._\\-]{2,127}|cw20\\/sei1(?:[a-z0-9]{38}|[a-z0-9]{58})|erc20\\/0x[a-fA-F0-9]{40})$\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (no decimals)</span>\n\t\t\t<input min=\"1\" step=\"1\" placeholder=\"0\" name=\"amount\" type=\"number\">\n\t\t</label>\n\t</form>\n";
 	}
 	return _templateCourtProposalCreatorSendCoin;
 }
@@ -1447,7 +1447,7 @@ let _templateCourtProposalCreatorExecuteWasmCoin: HTMLTemplateElement | null = n
 function getCourtProposalCreatorExecuteWasmCoinTemplate(): HTMLTemplateElement {
 	if (_templateCourtProposalCreatorExecuteWasmCoin == null) {
 		 _templateCourtProposalCreatorExecuteWasmCoin = document.createElement("template")
-		 _templateCourtProposalCreatorExecuteWasmCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<label>\n\t\t\t<span>Denom (ERC20 and CW20 assets cannot be used here)</span>\n\t\t\t<input name=\"denom\" type=\"text\" title=\"A token base unit\" placeholder=\"usei\" pattern=\"^(?!erc20\\/|cw20\\/)[a-zA-Z][a-zA-Z0-9/:._\\-]{2,127}$\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (no decimals)</span>\n\t\t\t<input min=\"1\" step=\"1\" placeholder=\"0\" name=\"amount\" type=\"number\">\n\t\t</label>\n\t</form>\n";
+		 _templateCourtProposalCreatorExecuteWasmCoin.innerHTML = "\n\t<div class=\"drag-handle\"></div>\n\t<button cewt-ref=\"delete-button\" class=\"danger short delete-button\" aria-label=\"delete\">\n\t\t<i class=\"cicon cicon-size-xsmall cicon-trash cicon-gradient\"></i>\n\t</button>\n\t<form cewt-ref=\"form\">\n\t\t<label>\n\t\t\t<span>Denom (ERC20 and CW20 assets cannot be used here)</span>\n\t\t\t<input name=\"denom\" type=\"text\" title=\"A token base unit\" placeholder=\"usei\" pattern=\"^(?!erc20\\/|cw20\\/)[a-zA-Z][a-zA-Z0-9\\/:._\\-]{2,127}$\">\n\t\t</label>\n\t\t<label>\n\t\t\t<span>Amount (no decimals)</span>\n\t\t\t<input min=\"1\" step=\"1\" placeholder=\"0\" name=\"amount\" type=\"number\">\n\t\t</label>\n\t</form>\n";
 	}
 	return _templateCourtProposalCreatorExecuteWasmCoin;
 }
@@ -1763,7 +1763,7 @@ export type CourtProposalFormCollection1 = HTMLFormControlsCollection & {
 	namedItem(name: "vote"): RadioNodeList;
 };
 export type CourtProposalFormValues1 = {
-	"vote": "" | "oppose" | "approve" | "abstain";
+	"vote": "" | "abstain" | "approve" | "oppose";
 };
 export type CourtProposalCreatorSendCoinFormCollection2 = HTMLFormControlsCollection & {
 	"recipient": HTMLInputElement;
@@ -1805,7 +1805,7 @@ export type CourtProposalCreatorExecuteWasmFormCollection4 = HTMLFormControlsCol
 export type CourtProposalCreatorExecuteWasmFormValues4 = {
 	"recipient": string;
 	"data": string;
-	"data_type": "" | "utf8" | "base64" | "json";
+	"data_type": "" | "base64" | "json" | "utf8";
 };
 export type CourtProposalCreatorExecuteWasmCoinFormCollection5 = HTMLFormControlsCollection & {
 	"denom": HTMLInputElement;
@@ -1838,7 +1838,7 @@ export type CourtProposalCreatorUpgradeWasmFormValues7 = {
 	"recipient": string;
 	"code": number;
 	"data": string;
-	"data_type": "" | "json" | "base64" | "utf8";
+	"data_type": "" | "base64" | "json" | "utf8";
 };
 export type CourtProposalCreatorChangeWasmAdminFormCollection8 = HTMLFormControlsCollection & {
 	"contract": HTMLInputElement;
