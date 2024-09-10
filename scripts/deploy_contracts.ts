@@ -43,7 +43,7 @@ const initResult = await clientEnv.instantiateContract(
 		vote_share_symbol: "ccrt",
 		vote_share_description: "CrownFi Court (DAO) voting shares"
 	} satisfies CourtInstantiateMsg,
-	"jewel_distributor"
+	"court_coordinator"
 );
 console.log("Confirmed transaction", initResult.transactionHash);
 console.log("New contract instantiated at", initResult.contractAddress);
