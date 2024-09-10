@@ -77,7 +77,6 @@ export class CourtProposalsContainerElement extends CourtProposalsContainerAutog
 				do {
 					this.#shouldRefresh = false;
 					const client = await ClientEnv.get();
-					// const contract = getCourtCoordinatorFromChainId(client.queryClient, client.chainId);
 					this.refs.newProposalButton.disabled = !client.hasAccount();
 					this.refs.newProposalButton.classList.remove("lazy-loading");
 				}while(this.#shouldRefresh);

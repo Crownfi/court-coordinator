@@ -3,7 +3,9 @@ import { WasmExtension } from '@cosmjs/cosmwasm-stargate';
 import { QueryClient } from "@cosmjs/stargate";
 export * from "./base/index.js";
 
-const knownContractAddresses: {[chainId: string]: string} = {};
+const knownContractAddresses: {[chainId: string]: string} = {
+	"atlantic-2": "sei1ht5fsda2mlz6740jmpegctcrl4nmk685mlfgjv43fqxdph80f6tq5dh2t6"
+};
 
 export function getCourtCoordinatorAddressFromChainId(chainId: string): string {
 	let contractAddress = knownContractAddresses[chainId];

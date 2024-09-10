@@ -14,8 +14,8 @@
 		"@cosmjs/proto-signing": "^0.32.4",
 		"@cosmjs/amino": "^0.32.4",
 		"@cosmjs/stargate": "^0.32.4",
-		"@crownfi/sei-js-core": "^5.2.4",
-		"@crownfi/sei-utils": "^0.3.11"
+		"@crownfi/sei-js-core": "^5.2.5",
+		"@crownfi/sei-utils": "^0.3.22"
 	},
 	"devDependencies": {
 		"typescript": "^5.5.3"
