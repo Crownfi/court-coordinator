@@ -10,7 +10,7 @@
 		"build:webpack": "webpack --mode=development",
 		"build:webpack:final": "webpack --mode=production",
 		"build:copy-static": "cp -R ./static/* ./dist/",
-		"build:final": "rm -rf dist/* && mkdir -p dist && npm run build:webpack:final && npm run build:copy-assets && npm run build:copy-static",
+		"build:final": "rm -rf dist/* && mkdir -p dist && npm run build:webpack:final && npm run build:copy-static",
 		"bloat-finder": "webpack --json > stats.json",
 		"codegen": "cewt codegen --inline-html --extended-form-controls --external-custom-element \"<span is=\\\"token-display\\\"> TokenDisplayElement from @crownfi/sei-webui-utils\" ./src"
 	},

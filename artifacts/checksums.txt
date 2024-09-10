@@ -1,1 +1,1 @@
-293e44d50753795c6d001d0099cd191b4d6c5ea256635358112784c1e48b663c  court_coordinator_contract.wasm
+2b098f4fa05d2903a5f32a941a73aee3745eb006056e510e1cf73c96980e814f  court_coordinator_contract.wasm
