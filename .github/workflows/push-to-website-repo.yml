@@ -36,6 +36,7 @@ jobs:
           cd www.crownfi.io/dao
           rm -rf *
           cp -R "$GITHUB_WORKSPACE"/packages/npm/court-coordinator-webapp/dist/* .
+          if [ "$GITHUB_REF_NAME" == "testnet" ]; then sed -i 's/is="wallet-options"/is="wallet-options" default-network="atlantic-2"/g' index.html; fi
           git add .
           git commit -m "Rebuild court-coordinator from $GITHUB_REF_NAME branch"
           git push origin "$GITHUB_REF_NAME"
